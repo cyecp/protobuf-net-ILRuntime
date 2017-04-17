@@ -96,13 +96,19 @@ namespace TheAwaitingGame
 
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM)]
         public ValueTask<decimal> AssertCompletedAsync() => _book.GetTotalWorthAssertCompletedAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM)]
+        public Task<double> TaskDoubleAsync() => _book.GetTotalWorthTaskDoubleAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM)]
+        public ValueTask<double> ValueTaskDoubleAsync() => _book.GetTotalWorthValueTaskDoubleAsync(REPEATS_PER_ITEM);
     }
 
     public static class ValueTaskExtensions
     {
         public static T AssertCompleted<T>(this ValueTask<T> task)
         {
-            if(!task.IsCompleted)
+            if (!task.IsCompleted)
             {
                 throw new InvalidOperationException();
             }
@@ -244,6 +250,24 @@ namespace TheAwaitingGame
 
             return total;
         }
+        public async Task<double> GetTotalWorthTaskDoubleAsync(int repeats)
+        {
+            double total = 0;
+            while (repeats-- > 0)
+            {
+                foreach (var order in Orders) total += await order.GetOrderWorthTaskDoubleAsync();
+            }
+            return total;
+        }
+        public async ValueTask<double> GetTotalWorthValueTaskDoubleAsync(int repeats)
+        {
+            double total = 0;
+            while (repeats-- > 0)
+            {
+                foreach (var order in Orders) total += await order.GetOrderWorthValueTaskDoubleAsync();
+            }
+            return total;
+        }
     }
     class Order
     {
@@ -297,6 +321,26 @@ namespace TheAwaitingGame
                 total += (task.IsCompleted) ? task.Result.Value : (await task).Value;
             }
             return new DecimalReference(total);
+        }
+
+        public async Task<double> GetOrderWorthTaskDoubleAsync()
+        {
+            double total = 0;
+            foreach (var line in Lines)
+            {
+                total += await line.GetLineWorthTaskDoubleAsync();
+            }
+            return total;
+        }
+
+        public async ValueTask<double> GetOrderWorthValueTaskDoubleAsync()
+        {
+            double total = 0;
+            foreach (var line in Lines)
+            {
+                total += await line.GetLineWorthValueTaskDoubleAsync();
+            }
+            return total;
         }
 
 
@@ -357,6 +401,10 @@ namespace TheAwaitingGame
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<DecimalReference> GetLineWorthValueTaskDecimalReferenceAsync() => new ValueTask<DecimalReference>(new DecimalReference(Quantity * UnitPrice));
+
+        public ValueTask<double> GetLineWorthValueTaskDoubleAsync() => new ValueTask<double>((double)(Quantity * UnitPrice));
+
+        public Task<double> GetLineWorthTaskDoubleAsync() => Task.FromResult<double>((double)(Quantity * UnitPrice));
     }
     public class DecimalReference
     {
