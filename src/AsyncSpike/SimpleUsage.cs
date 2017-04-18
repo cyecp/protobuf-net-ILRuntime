@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.IO.Pipelines.Text.Primitives;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Utf8;
 using System.Threading.Tasks;
@@ -121,10 +120,10 @@ public class SimpleUsage : IDisposable
     async ValueTask<Test1> DeserializeTest1Async(
         AsyncProtoReader reader, Test1 value = default(Test1))
     {
-        Trace("Reading fields...");
+        Trace($"Reading {nameof(Test1)} fields...");
         while (await reader.ReadNextFieldAsync())
         {
-            Trace($"Reading field {reader.FieldNumber}...");
+            Trace($"Reading {nameof(Test1)} field {reader.FieldNumber}...");
             switch (reader.FieldNumber)
             {
                 case 1:
@@ -134,8 +133,9 @@ public class SimpleUsage : IDisposable
                     await reader.SkipFieldAsync();
                     break;
             }
-            Trace($"Reading next field...");
+            Trace($"Reading next {nameof(Test1)} field...");
         }
+        Trace($"Reading {nameof(Test1)} fields complete");
         return value ?? Create(ref value);
     }
 
@@ -146,7 +146,8 @@ public class SimpleUsage : IDisposable
         {
             Trace($"Writing {nameof(Test1)} fields...");
             bytes += await writer.WriteVarintInt32Async(1, value.A);
-        }
+            Trace($"Writing {nameof(Test1)} field complete");
+        }        
         return bytes;
     }
     async ValueTask<long> SerializeTest2Async(AsyncProtoWriter writer, Test2 value)
@@ -156,6 +157,7 @@ public class SimpleUsage : IDisposable
         {
             Trace($"Writing {nameof(Test2)} fields...");
             bytes += await writer.WriteStringAsync(2, value.B);
+            Trace($"Writing {nameof(Test2)} field complete");
         }
         return bytes;
     }
@@ -167,6 +169,7 @@ public class SimpleUsage : IDisposable
         {
             Trace($"Writing {nameof(Test3)} fields...");
             bytes += await writer.WriteSubObject(3, value.C, (α, β) => SerializeTest1Async(α, β));
+            Trace($"Writing {nameof(Test3)} field complete");
         }
         return bytes;
     }
@@ -174,7 +177,7 @@ public class SimpleUsage : IDisposable
     private async Task ReadTest<T>(string hex, Func<AsyncProtoReader, T, ValueTask<T>> deserializer, string expected)
     {
         await ReadTestPipe<T>(hex, deserializer, expected);
-        await ReadTestSpan<T>(hex, deserializer, expected);
+        await ReadTestBuffer<T>(hex, deserializer, expected);
     }
     private async Task ReadTestPipe<T>(string hex, Func<AsyncProtoReader, T, ValueTask<T>> deserializer, string expected)
     {
@@ -182,24 +185,24 @@ public class SimpleUsage : IDisposable
         await AppendPayloadAsync(pipe, hex);
         pipe.Writer.Complete(); // simulate EOF
 
-        Trace("deserializing via PipeReader...");
+        Trace($"deserializing via {nameof(PipeReader)}...");
         using (var reader = AsyncProtoReader.Create(pipe.Reader))
         {
             var obj = await deserializer(reader, default(T));
             string actual = obj?.ToString();
-            Trace(actual);
+            await Console.Out.WriteLineAsync(actual);
             Assert.Equal(expected, actual);
         }
     }
-    private async Task ReadTestSpan<T>(string hex, Func<AsyncProtoReader, T, ValueTask<T>> deserializer, string expected)
+    private async Task ReadTestBuffer<T>(string hex, Func<AsyncProtoReader, T, ValueTask<T>> deserializer, string expected)
     {
         var blob = ParseBlob(hex);
-        Trace("deserializing via SpanReader...");
+        Trace($"deserializing via {nameof(BufferReader)}...");
         using (var reader = AsyncProtoReader.Create(blob))
         {
             var obj = await deserializer(reader, default(T));
             string actual = obj?.ToString();
-            Trace(actual);
+            await Console.Out.WriteLineAsync(actual);
             Assert.Equal(expected, actual);
         }
     }
@@ -224,7 +227,7 @@ public class SimpleUsage : IDisposable
             using (var writer = AsyncProtoWriter.Create(pipe.Writer))
             {
                 bytes = await serializer(writer, value);
-                Trace($"Serialized to pipe in {bytes} bytes");
+                await Console.Out.WriteLineAsync($"Serialized to pipe in {bytes} bytes");
                 await writer.FlushAsync(true);
             }
             var buffer = await pipe.Reader.ReadToEndAsync();
@@ -252,7 +255,7 @@ public class SimpleUsage : IDisposable
             using (var writer = AsyncProtoWriter.Create(blob))
             {
                 long newBytes = await serializer(writer, value);
-                Trace($"Serialized to span in {newBytes} bytes");
+                await Console.Out.WriteLineAsync($"Serialized to span in {newBytes} bytes");
                 Assert.Equal(bytes, newBytes);
                 await writer.FlushAsync(true);
             }
@@ -266,10 +269,10 @@ public class SimpleUsage : IDisposable
     async ValueTask<Test2> DeserializeTest2Async(
         AsyncProtoReader reader, Test2 value = default(Test2))
     {
-        Trace("Reading fields...");
+        Trace($"Reading {nameof(Test2)} fields...");
         while (await reader.ReadNextFieldAsync())
         {
-            Trace($"Reading field {reader.FieldNumber}...");
+            Trace($"Reading {nameof(Test2)} field {reader.FieldNumber}...");
             switch (reader.FieldNumber)
             {
                 case 2:
@@ -279,18 +282,19 @@ public class SimpleUsage : IDisposable
                     await reader.SkipFieldAsync();
                     break;
             }
-            Trace($"Reading next field...");
+            Trace($"Reading next {nameof(Test2)} field...");
         }
+        Trace($"Reading {nameof(Test2)} fields complete");
         return value ?? Create(ref value);
     }
 
     async ValueTask<Test3> DeserializeTest3Async(
         AsyncProtoReader reader, Test3 value = default(Test3))
     {
-        Trace("Reading fields...");
+        Trace($"Reading {nameof(Test3)} fields...");
         while (await reader.ReadNextFieldAsync())
         {
-            Trace($"Reading field {reader.FieldNumber}...");
+            Trace($"Reading {nameof(Test3)} field {reader.FieldNumber}...");
             switch (reader.FieldNumber)
             {
                 case 3:
@@ -302,8 +306,9 @@ public class SimpleUsage : IDisposable
                     await reader.SkipFieldAsync();
                     break;
             }
-            Trace($"Reading next field...");
+            Trace($"Reading next {nameof(Test3)} field...");
         }
+        Trace($"Reading {nameof(Test3)} fields complete");
         return value ?? Create(ref value);
     }
 
@@ -412,7 +417,7 @@ public class SimpleUsage : IDisposable
         protected abstract ValueTask<uint> ReadFixedUInt32Async();
         protected abstract ValueTask<ulong> ReadFixedUInt64Async();
 
-        public static AsyncProtoReader Create(ReadOnlySpan<byte> span) => new SpanReader(span);
+        public static AsyncProtoReader Create(Buffer<byte> buffer) => new BufferReader(buffer);
         public static AsyncProtoReader Create(IPipeReader pipe, bool closePipe = true, long bytes = long.MaxValue) => new PipeReader(pipe, closePipe, bytes);
 
         public virtual async ValueTask<bool> SkipFieldAsync()
@@ -420,7 +425,7 @@ public class SimpleUsage : IDisposable
             switch (WireType)
             {
                 case WireType.Varint:
-                    await ReadInt32Async(); // drop the result on te floor
+                    await ReadInt32Async(); // drop the result on the floor
                     return true;
                 default:
                     throw new NotImplementedException();
@@ -454,8 +459,9 @@ public class SimpleUsage : IDisposable
             switch (WireType)
             {
                 case WireType.String:
-                    int len = await ReadInt32Async();
-                    var result = new SubObjectToken(_end, _end = _position + len);
+                    int? len = await TryReadVarintInt32Async();
+                    if (len == null) throw new EndOfStreamException();
+                    var result = new SubObjectToken(_end, _end = _position + len.Value);
                     ApplyDataConstraint();
                     return result;
                 default:
@@ -583,7 +589,7 @@ public class SimpleUsage : IDisposable
 
         public static AsyncProtoWriter Create(IPipeWriter writer, bool closePipe = true) => new PipeWriter(writer, closePipe);
 
-        public static AsyncProtoWriter Create(Span<byte> span) => new SpanWriter(span);
+        public static AsyncProtoWriter Create(Buffer<byte> span) => new BufferWriter(span);
 
         /// <summary>
         /// Provides an AsyncProtoWriter that computes lengths without requiring backing storage
@@ -687,7 +693,8 @@ public class SimpleUsage : IDisposable
             _output.Ensure(Math.Min(128, value.Length << 2) | 1);
             var span = _output.Buffer.Span;
             int bytesWritten;
-            if (Encoder.TryEncode(value, span.Slice(1, Math.Min(127, span.Length - 1)), out bytesWritten))
+            if (Encoder.TryEncode(value, span.Slice(1, Math.Max(127, span.Length - 1)), out bytesWritten)
+                && (bytesWritten & ~127) == 0) // <= 127
             {
                 Debug.Assert(bytesWritten <= 127, "Too many bytes written in TryWriteShortStringWithLengthPrefix");
                 span[0] = (byte)bytesWritten++; // note the post-increment here to account for the prefix byte
@@ -695,7 +702,8 @@ public class SimpleUsage : IDisposable
                 Trace($"Wrote '{value}' in {bytesWritten} bytes (including length prefix) without checking length first");
                 return bytesWritten;
             }
-            return 0; // failure
+            return 0; // failure (for example: we had a 90 character string, but it turned out to have non-trivial
+            // unicode contents which meant that it took more than 127 bytes)
         }
         int WriteLongStringWithLengthPrefix(string value)
         {
@@ -813,34 +821,34 @@ public class SimpleUsage : IDisposable
             }
         }
     }
-    internal sealed class SpanWriter : AsyncProtoWriter
+    internal sealed class BufferWriter : AsyncProtoWriter
     {
-        private Span<byte> _span;
-        internal SpanWriter(Span<byte> span)
+        private Buffer<byte> _buffer;
+        internal BufferWriter(Buffer<byte> span)
         {
-            _span = span;
+            _buffer = span;
         }
 
         protected override ValueTask<int> WriteBytes(ReadOnlySpan<byte> bytes)
         {
-            bytes.CopyTo(_span);
-            Trace($"Wrote {bytes} raw bytes ({_span.Length - bytes.Length} remain)");
-            _span = _span.Slice(bytes.Length);
+            bytes.CopyTo(_buffer.Span);
+            Trace($"Wrote {bytes} raw bytes ({_buffer.Length - bytes.Length} remain)");
+            _buffer = _buffer.Slice(bytes.Length);
             return new ValueTask<int>(bytes.Length);
         }
 
         protected override ValueTask<int> WriteVarintUInt64Async(ulong value)
         {
-            int bytes = PipeWriter.WriteVarintUInt64(_span, value);
-            Trace($"Wrote {value} as varint in {bytes} bytes ({_span.Length - bytes} remain)");
-            _span = _span.Slice(bytes);
+            int bytes = PipeWriter.WriteVarintUInt64(_buffer.Span, value);
+            Trace($"Wrote {value} as varint in {bytes} bytes ({_buffer.Length - bytes} remain)");
+            _buffer = _buffer.Slice(bytes);
             return new ValueTask<int>(bytes);
         }
         protected override ValueTask<int> WriteVarintUInt32Async(uint value)
         {
-            int bytes = PipeWriter.WriteVarintUInt32(_span, value);
-            Trace($"Wrote {value} as varint in {bytes} bytes ({_span.Length - bytes} remain)");
-            _span = _span.Slice(bytes);
+            int bytes = PipeWriter.WriteVarintUInt32(_buffer.Span, value);
+            Trace($"Wrote {value} as varint in {bytes} bytes ({_buffer.Length - bytes} remain)");
+            _buffer = _buffer.Slice(bytes);
             return new ValueTask<int>(bytes);
         }
        
@@ -859,12 +867,12 @@ public class SimpleUsage : IDisposable
         {
             // to encode without checking bytes, need 4 times length, plus 1 - the sneaky way
             int bytesWritten;
-            if (Encoder.TryEncode(value, _span.Slice(1, Math.Min(127, _span.Length - 1)), out bytesWritten))
+            if (Encoder.TryEncode(value, _buffer.Slice(1, Math.Min(127, _buffer.Length - 1)).Span, out bytesWritten))
             {
                 Debug.Assert(bytesWritten <= 127, "Too many bytes written in TryWriteShortStringWithLengthPrefix");
-                _span[0] = (byte)bytesWritten++; // note the post-increment here to account for the prefix byte
-                Trace($"Wrote '{value}' in {bytesWritten} bytes (including length prefix) without checking length first ({_span.Length - bytesWritten} remain)");
-                _span = _span.Slice(bytesWritten);
+                _buffer.Span[0] = (byte)bytesWritten++; // note the post-increment here to account for the prefix byte
+                Trace($"Wrote '{value}' in {bytesWritten} bytes (including length prefix) without checking length first ({_buffer.Length - bytesWritten} remain)");
+                _buffer = _buffer.Slice(bytesWritten);
                 return bytesWritten;
             }
             return 0; // failure
@@ -872,41 +880,41 @@ public class SimpleUsage : IDisposable
         int WriteLongStringWithLengthPrefix(string value)
         {
             int payloadBytes = Encoding.GetByteCount(value);
-            int headerBytes = PipeWriter.WriteVarintUInt32(_span, (uint)payloadBytes), bytesWritten;
-            Trace($"Wrote '{value}' header in {headerBytes} bytes into available buffer space ({_span.Length - headerBytes} remain)");
-            _span = _span.Slice(headerBytes);
+            int headerBytes = PipeWriter.WriteVarintUInt32(_buffer.Span, (uint)payloadBytes), bytesWritten;
+            Trace($"Wrote '{value}' header in {headerBytes} bytes into available buffer space ({_buffer.Length - headerBytes} remain)");
+            _buffer = _buffer.Slice(headerBytes);
 
             // we should already have enough space in the output buffer - just write it
-            bool success = Encoder.TryEncode(value, _span, out bytesWritten);
+            bool success = Encoder.TryEncode(value, _buffer.Span, out bytesWritten);
             if(!success) throw new InvalidOperationException("Span range would be exceeded");
-            Trace($"Wrote '{value}' payload in {payloadBytes} bytes into available buffer space ({_span.Length - payloadBytes} remain)");
+            Trace($"Wrote '{value}' payload in {payloadBytes} bytes into available buffer space ({_buffer.Length - payloadBytes} remain)");
             Debug.Assert(bytesWritten == payloadBytes, "Payload length mismatch in WriteLongStringWithLengthPrefix");
             
-            _span = _span.Slice(payloadBytes);
+            _buffer = _buffer.Slice(payloadBytes);
 
             return headerBytes + payloadBytes;
         }
     }
-    internal sealed class SpanReader : AsyncProtoReader
+    internal sealed class BufferReader : AsyncProtoReader
     {
-        private ReadOnlySpan<byte> _active, _original;
-        internal SpanReader(ReadOnlySpan<byte> span) : base(span.Length)
+        private Buffer<byte> _active, _original;
+        internal BufferReader(Buffer<byte> buffer) : base(buffer.Length)
         {
-            _active = _original = span;
+            _active = _original = buffer;
         }
-        protected override async ValueTask<uint> ReadFixedUInt32Async()
+        protected override ValueTask<uint> ReadFixedUInt32Async()
         {
-            var val = _active.ReadLittleEndian<uint>();
+            var val = _active.Span.ReadLittleEndian<uint>();
             _active = _active.Slice(4);
             Advance(4);
-            return val;
+            return new ValueTask<uint>(val);
         }
-        protected override async ValueTask<ulong> ReadFixedUInt64Async()
+        protected override ValueTask<ulong> ReadFixedUInt64Async()
         {
-            var val = _active.ReadLittleEndian<uint>();
+            var val = _active.Span.ReadLittleEndian<ulong>();
             _active = _active.Slice(8);
             Advance(8);
-            return val;
+            return new ValueTask<ulong>(val);
         }
         protected override ValueTask<byte[]> ReadBytesAsync(int bytes)
         {
@@ -916,7 +924,7 @@ public class SimpleUsage : IDisposable
         }
         protected override ValueTask<string> ReadStringAsync(int bytes)
         {
-            bool result = Encoder.TryDecode(_active.Slice(0, bytes), out string text, out int consumed);
+            bool result = Encoder.TryDecode(_active.Slice(0, bytes).Span, out string text, out int consumed);
             Debug.Assert(result, "TryDecode failed");
             Debug.Assert(consumed == bytes, "TryDecode used wrong count");
             _active = _active.Slice(bytes);
@@ -925,7 +933,7 @@ public class SimpleUsage : IDisposable
         }
         protected override ValueTask<int?> TryReadVarintInt32Async()
         {
-            var result = PipeReader.TryPeekVarintSingleSpan(_active);
+            var result = PipeReader.TryPeekVarintSingleSpan(_active.Span);
             if (result.consumed == 0)
             {
                 return new ValueTask<int?>((int?)null);
@@ -1016,23 +1024,43 @@ public class SimpleUsage : IDisposable
 
                 // least significant group first
                 int val = *ptr & 127;
-                if ((*ptr & 128) == 0) return (val, 1);
+                if ((*ptr & 128) == 0)
+                {
+                    Trace($"Parsed {val} from 1 byte");
+                    return (val, 1);
+                }
                 if (len == 1) return (0, 0);
 
                 val |= (*++ptr & 127) << 7;
-                if ((*ptr & 128) == 0) return (val, 2);
+                if ((*ptr & 128) == 0)
+                {
+                    Trace($"Parsed {val} from 2 bytes");
+                    return (val, 2);
+                }
                 if (len == 2) return (0, 0);
 
                 val |= (*++ptr & 127) << 14;
-                if ((*ptr & 128) == 0) return (val, 3);
+                if ((*ptr & 128) == 0)
+                {
+                    Trace($"Parsed {val} from 3 bytes");
+                    return (val, 3);
+                }
                 if (len == 3) return (0, 0);
 
                 val |= (*++ptr & 127) << 21;
-                if ((*ptr & 128) == 0) return (val, 4);
+                if ((*ptr & 128) == 0)
+                {
+                    Trace($"Parsed {val} from 4 bytes");
+                    return (val, 4);
+                }
                 if (len == 4) return (0, 0);
 
                 val |= (*++ptr & 127) << 28;
-                if ((*ptr & 128) == 0) return (val, 5);
+                if ((*ptr & 128) == 0)
+                {
+                    Trace($"Parsed {val} from 5 bytes");
+                    return (val, 5);
+                }
                 if (len == 5) return (0, 0);
 
                 // TODO switch to long and check up to 10 bytes (for -1)
@@ -1058,6 +1086,7 @@ public class SimpleUsage : IDisposable
                             shift += 7;
                             if ((val & 128) == 0)
                             {
+                                Trace($"Parsed {value} from {consumed} bytes (multiple spans)");
                                 return (value, consumed);
                             }
                         }
