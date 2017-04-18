@@ -147,7 +147,7 @@ public class SimpleUsage : IDisposable
             Trace($"Writing {nameof(Test1)} fields...");
             bytes += await writer.WriteVarintInt32Async(1, value.A);
             Trace($"Writing {nameof(Test1)} field complete");
-        }        
+        }
         return bytes;
     }
     async ValueTask<long> SerializeTest2Async(AsyncProtoWriter writer, Test2 value)
@@ -388,7 +388,7 @@ public class SimpleUsage : IDisposable
 
         public async ValueTask<float> ReadSingleAsync()
         {
-            switch(WireType)
+            switch (WireType)
             {
                 case WireType.Fixed32:
                     return ToSingle(await ReadFixedUInt32Async());
@@ -496,7 +496,7 @@ public class SimpleUsage : IDisposable
                     return checked((int)val64);
                 default:
                     throw new InvalidOperationException();
-            }            
+            }
         }
 
         public async ValueTask<byte[]> ReadBytesAsync()
@@ -587,6 +587,34 @@ public class SimpleUsage : IDisposable
             return prefixLength + payloadLength;
         }
 
+        protected static int WriteVarintUInt32(Span<byte> span, uint value)
+        {
+            const uint SEVENBITS = 0x7F, CONTINUE = 0x80;
+
+            // least significant group first
+            int offset = 0;
+            while ((value & ~SEVENBITS) != 0)
+            {
+                span[offset++] = (byte)((value & SEVENBITS) | CONTINUE);
+                value >>= 7;
+            }
+            span[offset++] = (byte)value;
+            return offset;
+        }
+        protected static int WriteVarintUInt64(Span<byte> span, ulong value)
+        {
+            const ulong SEVENBITS = 0x7F, CONTINUE = 0x80;
+
+            // least significant group first
+            int offset = 0;
+            while ((value & ~SEVENBITS) != 0)
+            {
+                span[offset++] = (byte)((value & SEVENBITS) | CONTINUE);
+                value >>= 7;
+            }
+            span[offset++] = (byte)value;
+            return offset;
+        }
         public static AsyncProtoWriter Create(IPipeWriter writer, bool closePipe = true) => new PipeWriter(writer, closePipe);
 
         public static AsyncProtoWriter Create(Buffer<byte> span) => new BufferWriter(span);
@@ -595,6 +623,29 @@ public class SimpleUsage : IDisposable
         /// Provides an AsyncProtoWriter that computes lengths without requiring backing storage
         /// </summary>
         public static readonly AsyncProtoWriter Null = new NullWriter();
+
+        protected static int GetVarintLength(uint value)
+        {
+            int count = 0;
+            do
+            {
+                count++;
+                value >>= 7;
+            }
+            while (value != 0);
+            return count;
+        }
+        protected static int GetVarintLength(ulong value)
+        {
+            int count = 0;
+            do
+            {
+                count++;
+                value >>= 7;
+            }
+            while (value != 0);
+            return count;
+        }
         sealed class NullWriter : AsyncProtoWriter
         {
             protected override ValueTask<int> WriteBytes(ReadOnlySpan<byte> bytes) => new ValueTask<int>(bytes.Length);
@@ -608,28 +659,6 @@ public class SimpleUsage : IDisposable
             public override ValueTask<int> WriteBoolean(int fieldNumber, bool value)
                 => new ValueTask<int>(GetVarintLength((uint)(fieldNumber << 3)) + 1);
 
-            static int GetVarintLength(uint value)
-            {
-                int count = 0;
-                do
-                {
-                    count++;
-                    value >>= 7;
-                }
-                while (value != 0);
-                return count;
-            }
-            static int GetVarintLength(ulong value)
-            {
-                int count = 0;
-                do
-                {
-                    count++;
-                    value >>= 7;
-                }
-                while (value != 0);
-                return count;
-            }
             protected override ValueTask<int> WriteVarintUInt32Async(uint value)
                 => new ValueTask<int>(GetVarintLength(value));
 
@@ -707,25 +736,41 @@ public class SimpleUsage : IDisposable
         }
         int WriteLongStringWithLengthPrefix(string value)
         {
-            int payloadBytes = Encoding.GetByteCount(value);
             _output.Ensure(5);
-            int headerBytes = WriteVarintUInt32(_output.Buffer.Span, (uint)payloadBytes), bytesWritten;
-            _output.Advance(headerBytes);
-
-            if (payloadBytes <= _output.Buffer.Length)
+            int maxPayloadBytes = value.Length << 2, maxHeaderBytes = GetVarintLength((uint)maxPayloadBytes), payloadBytes, headerBytes;
+            if (_output.Buffer.Length <= (maxPayloadBytes + maxHeaderBytes) && maxHeaderBytes == GetVarintLength((uint)value.Length))
             {
-                // already enough space in the output buffer - just write it
-                bool success = Encoder.TryEncode(value, _output.Buffer.Span, out bytesWritten);
+                // that's handy - it all fits in the buffer, and the prefix-size is the same regardless of best/worst case
+                var span = _output.Buffer.Span;
+                bool success = Encoder.TryEncode(value, span.Slice(maxHeaderBytes), out payloadBytes);
                 Debug.Assert(success, "TryEncode failed in WriteLongStringWithLengthPrefix");
-                Trace($"Wrote '{value}' in {bytesWritten} bytes into available buffer space");
+                Debug.Assert(payloadBytes <= maxPayloadBytes, "Payload exceeded expected size");
+
+                headerBytes = WriteVarintUInt32(span, (uint)payloadBytes);
+                Debug.Assert(headerBytes == maxHeaderBytes, "Header bytes was wrong size");
+
+                _output.Advance(headerBytes + payloadBytes);
             }
             else
             {
-                bytesWritten = WriteLongString(value, ref _output);
+                payloadBytes = Encoding.GetByteCount(value);
+                headerBytes = WriteVarintUInt32(_output.Buffer.Span, (uint)payloadBytes);
+                _output.Advance(headerBytes);
+                int bytesWritten;
+                if (payloadBytes <= _output.Buffer.Length)
+                {
+                    // already enough space in the output buffer - just write it
+                    bool success = Encoder.TryEncode(value, _output.Buffer.Span, out bytesWritten);
+                    Debug.Assert(success, "TryEncode failed in WriteLongStringWithLengthPrefix");
+                    Trace($"Wrote '{value}' in {bytesWritten} bytes into available buffer space");
+                }
+                else
+                {
+                    bytesWritten = WriteLongString(value, ref _output);
+                }
+                Debug.Assert(bytesWritten == payloadBytes, "Payload length mismatch in WriteLongStringWithLengthPrefix");
+                _output.Advance(payloadBytes);
             }
-            Debug.Assert(bytesWritten == payloadBytes, "Payload length mismatch in WriteLongStringWithLengthPrefix");
-            _output.Advance(payloadBytes);
-
             return headerBytes + payloadBytes;
         }
         static unsafe int WriteLongString(string value, ref WritableBuffer output)
@@ -773,34 +818,7 @@ public class SimpleUsage : IDisposable
             Trace($"Wrote {value} in {len} bytes");
             return new ValueTask<int>(len);
         }
-        internal static int WriteVarintUInt32(Span<byte> span, uint value)
-        {
-            const uint SEVENBITS = 0x7F, CONTINUE = 0x80;
 
-            // least significant group first
-            int offset = 0;
-            while ((value & ~SEVENBITS) != 0)
-            {
-                span[offset++] = (byte)((value & SEVENBITS) | CONTINUE);
-                value >>= 7;
-            }
-            span[offset++] = (byte)value;
-            return offset;
-        }
-        internal static int WriteVarintUInt64(Span<byte> span, ulong value)
-        {
-            const ulong SEVENBITS = 0x7F, CONTINUE = 0x80;
-
-            // least significant group first
-            int offset = 0;
-            while((value & ~SEVENBITS) != 0)
-            {
-                span[offset++] = (byte)((value & SEVENBITS) | CONTINUE);
-                value >>= 7;
-            }
-            span[offset++] = (byte)value;
-            return offset;
-        }
         public override void Dispose()
         {
             var writer = _writer;
@@ -846,12 +864,12 @@ public class SimpleUsage : IDisposable
         }
         protected override ValueTask<int> WriteVarintUInt32Async(uint value)
         {
-            int bytes = PipeWriter.WriteVarintUInt32(_buffer.Span, value);
+            int bytes = WriteVarintUInt32(_buffer.Span, value);
             Trace($"Wrote {value} as varint in {bytes} bytes ({_buffer.Length - bytes} remain)");
             _buffer = _buffer.Slice(bytes);
             return new ValueTask<int>(bytes);
         }
-       
+
         protected override ValueTask<int> WriteStringWithLengthPrefix(string value)
         {
             // can write up to 127 characters (if ASCII) in a single-byte prefix - and conveniently
@@ -879,19 +897,37 @@ public class SimpleUsage : IDisposable
         }
         int WriteLongStringWithLengthPrefix(string value)
         {
-            int payloadBytes = Encoding.GetByteCount(value);
-            int headerBytes = PipeWriter.WriteVarintUInt32(_buffer.Span, (uint)payloadBytes), bytesWritten;
-            Trace($"Wrote '{value}' header in {headerBytes} bytes into available buffer space ({_buffer.Length - headerBytes} remain)");
-            _buffer = _buffer.Slice(headerBytes);
+            int maxPayloadBytes = value.Length << 2, maxHeaderBytes = GetVarintLength((uint)maxPayloadBytes), payloadBytes, headerBytes;
+            if (_buffer.Length <= (maxPayloadBytes + maxHeaderBytes) && maxHeaderBytes == GetVarintLength((uint)value.Length))
+            {
+                // that's handy - it all fits in the buffer, and the prefix-size is the same regardless of best/worst case
+                var span = _buffer.Span;
+                bool success = Encoder.TryEncode(value, span.Slice(maxHeaderBytes), out payloadBytes);
+                Debug.Assert(success, "TryEncode failed in WriteLongStringWithLengthPrefix");
+                Debug.Assert(payloadBytes <= maxPayloadBytes, "Payload exceeded expected size");
 
-            // we should already have enough space in the output buffer - just write it
-            bool success = Encoder.TryEncode(value, _buffer.Span, out bytesWritten);
-            if(!success) throw new InvalidOperationException("Span range would be exceeded");
-            Trace($"Wrote '{value}' payload in {payloadBytes} bytes into available buffer space ({_buffer.Length - payloadBytes} remain)");
-            Debug.Assert(bytesWritten == payloadBytes, "Payload length mismatch in WriteLongStringWithLengthPrefix");
-            
-            _buffer = _buffer.Slice(payloadBytes);
+                headerBytes = WriteVarintUInt32(span, (uint)payloadBytes);
+                Debug.Assert(headerBytes == maxHeaderBytes, "Header bytes was wrong size");
+                Trace($"Wrote '{value}' payload in {headerBytes}+{payloadBytes} bytes into available buffer space ({_buffer.Length - (headerBytes + payloadBytes)} remain)");
+                _buffer = _buffer.Slice(headerBytes + payloadBytes);
+            }
+            else
+            {
+                int bytesWritten;
+                payloadBytes = Encoding.GetByteCount(value);
+                headerBytes = WriteVarintUInt32(_buffer.Span, (uint)payloadBytes);
+                Trace($"Wrote '{value}' header in {headerBytes} bytes into available buffer space ({_buffer.Length - headerBytes} remain)");
+                _buffer = _buffer.Slice(headerBytes);
 
+                // we should already have enough space in the output buffer - just write it
+                bool success = Encoder.TryEncode(value, _buffer.Span, out bytesWritten);
+                if (!success) throw new InvalidOperationException("Span range would be exceeded");
+                Trace($"Wrote '{value}' payload in {payloadBytes} bytes into available buffer space ({_buffer.Length - payloadBytes} remain)");
+                Debug.Assert(bytesWritten == payloadBytes, "Payload length mismatch in WriteLongStringWithLengthPrefix");
+
+                _buffer = _buffer.Slice(payloadBytes);
+
+            }
             return headerBytes + payloadBytes;
         }
     }
@@ -1136,7 +1172,7 @@ public class SimpleUsage : IDisposable
         }
         protected override void RemoveDataConstraint()
         {
-            if(_available.End != _originalAsReceived.End)
+            if (_available.End != _originalAsReceived.End)
             {
                 int wasForConsoleMessage = _available.Length;
                 // change back to the original right hand boundary
@@ -1188,7 +1224,7 @@ public class SimpleUsage : IDisposable
                 {
                     reader.Advance(available.Start);
                 }
-                
+
                 if (_closePipe)
                 {
                     reader.Complete();
