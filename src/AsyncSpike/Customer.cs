@@ -11,7 +11,7 @@ namespace ProtoBuf
     }
     public static class SerializerExtensions
     {
-        public static ValueTask<T> DeserializeAsync<T>(this IAsyncSerializer<T> serializer, Buffer<byte> buffer, T value = default(T))
+        public static ValueTask<T> DeserializeAsync<T>(this IAsyncSerializer<T> serializer, Buffer<byte> buffer, bool useNewTextEncoder, T value = default(T))
         {
             async ValueTask<T> AwaitAndDispose(AsyncProtoReader reader, ValueTask<T> task)
             {
@@ -21,7 +21,7 @@ namespace ProtoBuf
                 AsyncProtoReader reader = null;
                 try
                 {
-                    reader = AsyncProtoReader.Create(buffer);
+                    reader = AsyncProtoReader.Create(buffer, useNewTextEncoder);
                     var task = serializer.DeserializeAsync(reader, value);
                     if (!task.IsCompleted)
                     {

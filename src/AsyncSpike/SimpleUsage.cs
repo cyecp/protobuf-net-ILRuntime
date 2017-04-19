@@ -25,6 +25,8 @@ public class SimpleUsage : IDisposable
         var customer = InventCustomer(rand);
         using (var ms = new MemoryStream())
         {
+
+            Console.WriteLine("(the number [in square brackets] will change between runs)");
             Describe(customer, "original");
 
             Serializer.Serialize(ms, customer);
@@ -40,17 +42,29 @@ public class SimpleUsage : IDisposable
             }
             Buffer<byte> buffer = range.Array; // y u no convert?
             buffer = buffer.Slice(range.Offset, range.Count);
-            var task = SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer);
+            var task = SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer, false);
             if(task.IsCompleted)
             {
                 Console.WriteLine("completed!");
-                Describe(task.Result, "new code");
+                Describe(task.Result, "new code, old encoder");
             }
             else
             {
                 Console.WriteLine("incomplete");
             }
-            const int LOOP = 100000;
+
+            task = SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer, true);
+            if (task.IsCompleted)
+            {
+                Console.WriteLine("completed!");
+                Describe(task.Result, "new code, new encoder");
+            }
+            else
+            {
+                Console.WriteLine("incomplete");
+            }
+
+            const int LOOP = 50000;
             var watch = Stopwatch.StartNew();
             for(int i = 0; i < LOOP; i++)
             {
@@ -63,16 +77,24 @@ public class SimpleUsage : IDisposable
             watch = Stopwatch.StartNew();
             for (int i = 0; i < LOOP; i++)
             {
-                GC.KeepAlive(SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer).Result);
+                GC.KeepAlive(SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer, false).Result);
             }
             watch.Stop();
-            Console.WriteLine($"new async code: {watch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"new async code, old encoder: {watch.ElapsedMilliseconds}ms");
+
+            watch = Stopwatch.StartNew();
+            for (int i = 0; i < LOOP; i++)
+            {
+                GC.KeepAlive(SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer, true).Result);
+            }
+            watch.Stop();
+            Console.WriteLine($"new async code, new encoder: {watch.ElapsedMilliseconds}ms");
         }
     }
 
     private static void Describe(Customer customer, string label)
     {
-        Console.WriteLine($"{label}\t{customer.Id}: {customer.Orders.Count} [{customer.GetHashCode()}");
+        Console.WriteLine($"{label}\t{customer.Id}: {customer.Orders.Count} [{customer.GetHashCode()}]");
     }
 
     private static Customer InventCustomer(Random rand)
@@ -292,7 +314,7 @@ public class SimpleUsage : IDisposable
     {
         var blob = ParseBlob(hex);
         Trace($"deserializing via {nameof(BufferReader)}...");
-        using (var reader = AsyncProtoReader.Create(blob))
+        using (var reader = AsyncProtoReader.Create(blob, true))
         {
             var obj = await deserializer(reader, default(T));
             string actual = obj?.ToString();

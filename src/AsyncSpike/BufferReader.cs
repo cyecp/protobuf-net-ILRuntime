@@ -1,4 +1,5 @@
-﻿using System.Binary;
+﻿using System;
+using System.Binary;
 using System.Buffers;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -8,9 +9,11 @@ namespace ProtoBuf
     internal sealed class BufferReader : AsyncProtoReader
     {
         private Buffer<byte> _active, _original;
-        internal BufferReader(Buffer<byte> buffer) : base(buffer.Length)
+        private readonly bool _useNewTextEncoder;
+        internal BufferReader(Buffer<byte> buffer, bool useNewTextEncoder) : base(buffer.Length)
         {
             _active = _original = buffer;
+            _useNewTextEncoder = useNewTextEncoder;
         }
         protected override Task SkipBytesAsync(int bytes)
         {
@@ -38,11 +41,29 @@ namespace ProtoBuf
             _active = _active.Slice(bytes);
             return AsTask(arr);
         }
-        protected override ValueTask<string> ReadStringAsync(int bytes)
+        protected unsafe override ValueTask<string> ReadStringAsync(int bytes)
         {
-            bool result = Encoder.TryDecode(_active.Slice(0, bytes).Span, out string text, out int consumed);
-            Debug.Assert(result, "TryDecode failed");
-            Debug.Assert(consumed == bytes, "TryDecode used wrong count");
+            string text;
+            ArraySegment<byte> segment;
+            void* ptr;
+            if (_useNewTextEncoder)
+            {
+                bool result = Encoder.TryDecode(_active.Slice(0, bytes).Span, out text, out int consumed);
+                Debug.Assert(result, "TryDecode failed");
+                Debug.Assert(consumed == bytes, "TryDecode used wrong count");
+            }
+            else if (_active.TryGetArray(out segment))
+            {
+                text = Encoding.GetString(segment.Array, segment.Offset, bytes);
+            }
+            else if (_active.TryGetPointer(out ptr))
+            {
+                text = Encoding.GetString((byte*)ptr, bytes);
+            }
+            else
+            {
+                throw new InvalidOperationException("No text decoding");
+            }
             _active = _active.Slice(bytes);
             Advance(bytes);
             return AsTask(text);

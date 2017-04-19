@@ -16,7 +16,8 @@ namespace ProtoBuf
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static ValueTask<T> AsTask<T>(T result) => new ValueTask<T>(result);
         protected static readonly Task<bool> True = Task.FromResult(true), False = Task.FromResult(false);
-        
+
+        protected static readonly Encoding Encoding = new UTF8Encoding(false);
         protected static readonly TextEncoder Encoder = TextEncoder.Utf8;
         protected abstract void ApplyDataConstraint();
         protected abstract void RemoveDataConstraint();
@@ -62,7 +63,7 @@ namespace ProtoBuf
         protected abstract ValueTask<uint> ReadFixedUInt32Async();
         protected abstract ValueTask<ulong> ReadFixedUInt64Async();
 
-        public static AsyncProtoReader Create(Buffer<byte> buffer) => new BufferReader(buffer);
+        public static AsyncProtoReader Create(Buffer<byte> buffer, bool useNewTextEncoder) => new BufferReader(buffer, useNewTextEncoder);
         public static AsyncProtoReader Create(IPipeReader pipe, bool closePipe = true, long bytes = long.MaxValue) => new PipeReader(pipe, closePipe, bytes);
 
         protected abstract Task SkipBytesAsync(int bytes);
