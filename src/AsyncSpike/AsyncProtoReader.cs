@@ -25,8 +25,8 @@ namespace ProtoBuf
 
         public ValueTask<float> ReadSingleAsync()
         {
-            async ValueTask<float> Awaited32(ValueTask<uint> t) => ToSingle(await t);
-            async ValueTask<float> Awaited64(ValueTask<ulong> t) => (float)ToDouble(await t);
+            async ValueTask<float> Awaited32(ValueTask<uint> t) => ToSingle(await t.ConfigureAwait(false));
+            async ValueTask<float> Awaited64(ValueTask<ulong> t) => (float)ToDouble(await t.ConfigureAwait(false));
             switch (WireType)
             {
                 case WireType.Fixed32:
@@ -41,8 +41,8 @@ namespace ProtoBuf
         }
         public ValueTask<double> ReadDoubleAsync()
         {
-            async ValueTask<double> Awaited32(ValueTask<uint> t) => (double)ToSingle(await t);
-            async ValueTask<double> Awaited64(ValueTask<ulong> t) => ToDouble(await t);
+            async ValueTask<double> Awaited32(ValueTask<uint> t) => (double)ToSingle(await t.ConfigureAwait(false));
+            async ValueTask<double> Awaited64(ValueTask<ulong> t) => ToDouble(await t.ConfigureAwait(false));
             switch (WireType)
             {
                 case WireType.Fixed32:
@@ -73,10 +73,10 @@ namespace ProtoBuf
         public virtual Task SkipFieldAsync()
         {
             async Task AwaitedCheckVarint(ValueTask<int?> prefix)
-                => ValueOrEOF(await prefix);
+                => ValueOrEOF(await prefix.ConfigureAwait(false));
 
             async Task AwaitedSkipByPrefixLength(ValueTask<int?> task)
-                => await SkipBytesAsync(ValueOrEOF(await task));
+                => await SkipBytesAsync(ValueOrEOF(await task.ConfigureAwait(false))).ConfigureAwait(false);
 
             ValueTask<int?> varint;
             switch (WireType)
@@ -112,7 +112,7 @@ namespace ProtoBuf
         {
             async Task<bool> Awaited(ValueTask<int?> task)
             {
-                var next = await task;
+                var next = await task.ConfigureAwait(false);
                 _fieldHeader = next.GetValueOrDefault();
                 return next.HasValue;
             }
@@ -134,7 +134,7 @@ namespace ProtoBuf
         {
             async ValueTask<SubObjectToken> Awaited(ValueTask<int?> task)
             {
-                int len = ValueOrEOF(await task);
+                int len = ValueOrEOF(await task.ConfigureAwait(false));
                 var result = new SubObjectToken(_end, _end = _position + len);
                 ApplyDataConstraint();
                 return result;
@@ -169,9 +169,9 @@ namespace ProtoBuf
         }
         public ValueTask<int> ReadInt32Async()
         {
-            async ValueTask<int> AwaitedVarint(ValueTask<int?> task) => ValueOrEOF(await task);
-            async ValueTask<int> AwaitedFixed32(ValueTask<uint> task) => checked((int)await task);
-            async ValueTask<int> AwaitedFixed64(ValueTask<ulong> task) => checked((int)await task);
+            async ValueTask<int> AwaitedVarint(ValueTask<int?> task) => ValueOrEOF(await task.ConfigureAwait(false));
+            async ValueTask<int> AwaitedFixed32(ValueTask<uint> task) => checked((int)await task.ConfigureAwait(false));
+            async ValueTask<int> AwaitedFixed64(ValueTask<ulong> task) => checked((int)await task.ConfigureAwait(false));
             switch (WireType)
             {
                 case WireType.Varint:
@@ -194,7 +194,7 @@ namespace ProtoBuf
         static readonly byte[] EmptyBytes = new byte[0];
         public Task<bool> ReadBooleanAsync()
         {
-            async Task<bool> Awaited(ValueTask<int> task) => (await task) != 0;
+            async Task<bool> Awaited(ValueTask<int> task) => (await task.ConfigureAwait(false)) != 0;
             var val = ReadInt32Async();
             return val.IsCompleted ? (val.Result != 0 ? True : False) : Awaited(val);
         }
@@ -205,10 +205,10 @@ namespace ProtoBuf
         {
             async ValueTask<string> Awaited(ValueTask<int?> task)
             {
-                int llen = ValueOrEOF(await task);
+                int llen = ValueOrEOF(await task.ConfigureAwait(false));
                 Trace($"String length: {llen}");
 
-                return llen == 0 ? "" : await ReadStringAsync(llen);
+                return llen == 0 ? "" : await ReadStringAsync(llen).ConfigureAwait(false);
             }
 
             if (WireType != WireType.String) throw new InvalidOperationException();
@@ -224,10 +224,10 @@ namespace ProtoBuf
         {
             async ValueTask<byte[]> Awaited(ValueTask<int?> task)
             {
-                int llen = ValueOrEOF(await task);
+                int llen = ValueOrEOF(await task.ConfigureAwait(false));
                 Trace($"BLOB length: {llen}");
 
-                return llen == 0 ? EmptyBytes : await ReadBytesAsync(llen);
+                return llen == 0 ? EmptyBytes : await ReadBytesAsync(llen).ConfigureAwait(false);
             }
 
             if (WireType != WireType.String) throw new InvalidOperationException();

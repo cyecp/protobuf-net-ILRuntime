@@ -27,17 +27,17 @@ namespace ProtoBuf
         {
             async Task Awaited(Task<bool> task)
             {
-                if (!await task) throw new EndOfStreamException();
+                if (!await task.ConfigureAwait(false)) ThrowEOF<int>();
                 while (_available.Length < bytes)
                 {
-                    if (!await RequestMoreDataAsync()) throw new EndOfStreamException();
+                    if (!await RequestMoreDataAsync().ConfigureAwait(false)) ThrowEOF<int>();
                 }
             }
             while (_available.Length < bytes)
             {
                 var task = RequestMoreDataAsync();
                 if (!task.IsCompleted) return Awaited(task);
-                if (!task.Result) throw new EndOfStreamException();
+                if (!task.Result) return ThrowEOF<Task>();
             }
             return Task.CompletedTask;
         }
@@ -45,7 +45,7 @@ namespace ProtoBuf
         {
             async ValueTask<uint> Awaited(Task task)
             {
-                await task;
+                await task.ConfigureAwait(false);
                 return Process();
             }
             uint Process()
@@ -65,7 +65,7 @@ namespace ProtoBuf
         {
             async ValueTask<ulong> Awaited(Task task)
             {
-                await task;
+                await task.ConfigureAwait(false);
                 return Process();
             }
             ulong Process()
@@ -85,7 +85,7 @@ namespace ProtoBuf
         {
             async ValueTask<byte[]> Awaited(Task task, int len)
             {
-                await task;
+                await task.ConfigureAwait(false);
                 return Process(len);
             }
             byte[] Process(int len)
@@ -105,7 +105,7 @@ namespace ProtoBuf
         {
             async ValueTask<string> Awaited(Task task, int len)
             {
-                await task;
+                await task.ConfigureAwait(false);
                 return Process(len);
             }
             string Process(int len)
@@ -242,7 +242,7 @@ namespace ProtoBuf
             // convert from a synchronous request to an async continuation
             async Task<bool> Awaited(ReadableBufferAwaitable t, int oldLen)
             {
-                ReadResult read = await t;
+                ReadResult read = await t; // note: not a Task/ValueTask<T> - ConfigureAwait does not apply
                 while (EndReadCheckAskAgain(read, oldLen))
                 {
                     t = BeginReadAsync();
@@ -304,7 +304,7 @@ namespace ProtoBuf
         {
             async ValueTask<int?> Awaited(Task<bool> task)
             {
-                while(await task)
+                while(await task.ConfigureAwait(false))
                 {
                     var read = TryPeekVarintInt32(ref _available);
                     if (read.consumed != 0)
@@ -317,7 +317,7 @@ namespace ProtoBuf
                     task = RequestMoreDataAsync();
                 }
                 if (_available.Length == 0) return null;
-                throw new EndOfStreamException();
+                return ThrowEOF<int?>();
             }
 
             Task<bool> more;
@@ -337,7 +337,7 @@ namespace ProtoBuf
             while (more.Result);
 
             if (_available.Length == 0) return AsTask<int?>(null);
-            throw new EndOfStreamException();
+            return ThrowEOF<ValueTask<int?>>();
         }
 
         public override void Dispose()
