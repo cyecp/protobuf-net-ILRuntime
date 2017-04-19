@@ -67,9 +67,31 @@ namespace TheAwaitingGame
                 book.Orders.Add(order);
             }
             _book = book;
+
+            int baseline = _book.GetTotalWorthInt32Sync(5);
+            Check(baseline, _book.GetTotalWorthTaskInt32AwaitAsync(5));
+            Check(baseline, _book.GetTotalWorthTaskInt32ManualCompletedAsync(5));
+            Check(baseline, _book.GetTotalWorthTaskInt32ManualCompletedSuccessfullyAsync(5));
+            Check(baseline, _book.GetTotalWorthValueTaskInt32AwaitAsync(5));
+            Check(baseline, _book.GetTotalWorthValueTaskInt32ManualCompletedAsync(5));
+            Check(baseline, _book.GetTotalWorthValueTaskInt32ManualCompletedSuccessfullyAsync(5));
+        }
+
+        private static void Check(int baseline, ValueTask<int> task)
+        {
+            if (task.IsCompleted && task.Result != baseline)
+                throw new InvalidOperationException("Baseline check failed");
+        }
+
+        private static void Check(int baseline, Task<int> task)
+        {
+            if (task.IsCompleted && task.Result != baseline)
+                throw new InvalidOperationException("Baseline check failed");
         }
 
         const int REPEATS_PER_ITEM = 250;
+
+#if OLDER_BENCHMARKS
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM)]
         public decimal Sync() => _book.GetTotalWorth(REPEATS_PER_ITEM);
 
@@ -103,21 +125,26 @@ namespace TheAwaitingGame
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM)]
         public ValueTask<double> ValueTaskDoubleAsync() => _book.GetTotalWorthValueTaskDoubleAsync(REPEATS_PER_ITEM);
 
+#endif
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/await/task")]
         public Task<int> TaskInt32AwaitAsync() => _book.GetTotalWorthTaskInt32AwaitAsync(REPEATS_PER_ITEM);
-
-        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/await/valuetask")]
-        public ValueTask<int> ValueTaskInt32AwaitAsync() => _book.GetTotalWorthValueTaskInt32AwaitAsync(REPEATS_PER_ITEM);
 
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/task/iscompleted")]
         public Task<int> TaskInt32ManualCAsync() => _book.GetTotalWorthTaskInt32ManualCompletedAsync(REPEATS_PER_ITEM);
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/task/iscompletedsuccessfully")]
         public Task<int> TaskInt32ManualCSAsync() => _book.GetTotalWorthTaskInt32ManualCompletedSuccessfullyAsync(REPEATS_PER_ITEM);
 
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/await/valuetask")]
+        public ValueTask<int> ValueTaskInt32AwaitAsync() => _book.GetTotalWorthValueTaskInt32AwaitAsync(REPEATS_PER_ITEM);
+
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/valuetask/iscompleted")]
         public ValueTask<int> ValueTaskInt32ManualCAsync() => _book.GetTotalWorthValueTaskInt32ManualCompletedAsync(REPEATS_PER_ITEM);
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/valuetask/iscompletedsuccessfully")]
         public ValueTask<int> ValueTaskInt32ManualCSAsync() => _book.GetTotalWorthValueTaskInt32ManualCompletedSuccessfullyAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/sync", Baseline = true)]
+        public int TaskInt32Sync() => _book.GetTotalWorthInt32Sync(REPEATS_PER_ITEM);
     }
 
     public static class ValueTaskExtensions
@@ -285,6 +312,18 @@ namespace TheAwaitingGame
             return total;
         }
 
+        internal int GetTotalWorthInt32Sync(int repeats)
+        {
+            int total = 0;
+            while (repeats-- > 0)
+            {
+                for (int i = 0; i < Orders.Count; i++)
+                {
+                    total += Orders[i].GetOrderWorthInt32Sync();
+                }
+            }
+            return total;
+        }
         internal async Task<int> GetTotalWorthTaskInt32AwaitAsync(int repeats)
         {
             int total = 0;
@@ -558,6 +597,15 @@ namespace TheAwaitingGame
             return total;
         }
 
+        internal int GetOrderWorthInt32Sync()
+        {
+            int total = 0;
+            for (int i = 0; i < Lines.Count; i++)
+            {
+                total += Lines[i].GetLineWorthInt32Sync();
+            }
+            return total;
+        }
         internal async Task<int> GetOrderWorthTaskInt32AwaitAsync()
         {
             int total = 0;
@@ -683,6 +731,7 @@ namespace TheAwaitingGame
 
         public Task<double> GetLineWorthTaskDoubleAsync() => Task.FromResult<double>((double)(Quantity * UnitPrice));
 
+        internal int GetLineWorthInt32Sync() => Quantity;
         internal Task<int> GetLineWorthInt32TaskAsync() => Task.FromResult(Quantity);
 
         internal ValueTask<int> GetLineWorthInt32ValueTaskAsync() => new ValueTask<int>(Quantity);
