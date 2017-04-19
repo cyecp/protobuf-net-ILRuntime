@@ -34,7 +34,7 @@ public class SimpleUsage : IDisposable
             
             ms.Position = 0;
             var clone = Serializer.Deserialize<Customer>(ms);
-            Describe(clone, "old code");
+            Describe(clone, "old code, old encoder");
 
             if(!ms.TryGetBuffer(out var range))
             {
@@ -72,7 +72,7 @@ public class SimpleUsage : IDisposable
                 GC.KeepAlive(Serializer.Deserialize<Customer>(ms));
             }
             watch.Stop();
-            Console.WriteLine($"old sync code: {watch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"old sync code, old encoder: {watch.ElapsedMilliseconds}ms");
 
             watch = Stopwatch.StartNew();
             for (int i = 0; i < LOOP; i++)
