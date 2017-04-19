@@ -731,10 +731,22 @@ namespace TheAwaitingGame
 
         public Task<double> GetLineWorthTaskDoubleAsync() => Task.FromResult<double>((double)(Quantity * UnitPrice));
 
+#if CONSTANT_RESULTS
+        const int FixedResultValue = 42;
+        static readonly Task<int> FixedResultTask = Task.FromResult(FixedResultValue);
+
+        internal int GetLineWorthInt32Sync() => FixedResultValue;
+        internal Task<int> GetLineWorthInt32TaskAsync() => FixedResultTask;
+
+        internal ValueTask<int> GetLineWorthInt32ValueTaskAsync() => new ValueTask<int>(FixedResultValue);
+#else
+
         internal int GetLineWorthInt32Sync() => Quantity;
         internal Task<int> GetLineWorthInt32TaskAsync() => Task.FromResult(Quantity);
 
         internal ValueTask<int> GetLineWorthInt32ValueTaskAsync() => new ValueTask<int>(Quantity);
+
+#endif
     }
     public class DecimalReference
     {
