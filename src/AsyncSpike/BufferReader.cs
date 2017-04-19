@@ -47,15 +47,30 @@ namespace ProtoBuf
             Advance(bytes);
             return AsTask(text);
         }
-        protected override ValueTask<int?> TryReadVarintInt32Async()
+        public override Task<bool> AssertNextField(int fieldNumber)
+        {
+            var result = PipeReader.TryPeekVarintSingleSpan(_active.Span);
+            if (result.consumed != 0 && (result.value >> 3) == fieldNumber)
+            {
+                SetFieldHeader(result.value);
+                _active = _active.Slice(result.consumed);
+                Advance(result.consumed);
+                return True;
+            }
+            return False;
+        }
+        protected override ValueTask<int?> TryReadVarintInt32Async(bool consume)
         {
             var result = PipeReader.TryPeekVarintSingleSpan(_active.Span);
             if (result.consumed == 0)
             {
                 return new ValueTask<int?>((int?)null);
             }
-            _active = _active.Slice(result.consumed);
-            Advance(result.consumed);
+            if (consume)
+            {
+                _active = _active.Slice(result.consumed);
+                Advance(result.consumed);
+            }
             return AsTask<int?>(result.value);
         }
         protected override void ApplyDataConstraint()

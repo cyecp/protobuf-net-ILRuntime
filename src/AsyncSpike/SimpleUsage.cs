@@ -6,7 +6,9 @@ using ProtoBuf;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Text;
 using System.Text.Utf8;
 using System.Threading.Tasks;
@@ -18,6 +20,100 @@ public class SimpleUsage : IDisposable
     void IDisposable.Dispose() => _factory.Dispose();
 
     static void Main()
+    {
+        var rand = new Random(1234);
+        var customer = InventCustomer(rand);
+        using (var ms = new MemoryStream())
+        {
+            Describe(customer, "original");
+
+            Serializer.Serialize(ms, customer);
+            Console.WriteLine($"serialized: {ms.Length} bytes");
+            
+            ms.Position = 0;
+            var clone = Serializer.Deserialize<Customer>(ms);
+            Describe(clone, "old code");
+
+            if(!ms.TryGetBuffer(out var range))
+            {
+                range = new ArraySegment<byte>(ms.ToArray());
+            }
+            Buffer<byte> buffer = range.Array; // y u no convert?
+            buffer = buffer.Slice(range.Offset, range.Count);
+            var task = SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer);
+            if(task.IsCompleted)
+            {
+                Console.WriteLine("completed!");
+                Describe(task.Result, "new code");
+            }
+            else
+            {
+                Console.WriteLine("incomplete");
+            }
+            const int LOOP = 100000;
+            var watch = Stopwatch.StartNew();
+            for(int i = 0; i < LOOP; i++)
+            {
+                ms.Position = 0;
+                GC.KeepAlive(Serializer.Deserialize<Customer>(ms));
+            }
+            watch.Stop();
+            Console.WriteLine($"old sync code: {watch.ElapsedMilliseconds}ms");
+
+            watch = Stopwatch.StartNew();
+            for (int i = 0; i < LOOP; i++)
+            {
+                GC.KeepAlive(SerializerExtensions.DeserializeAsync<Customer>(CustomSerializer.Instance, buffer).Result);
+            }
+            watch.Stop();
+            Console.WriteLine($"new async code: {watch.ElapsedMilliseconds}ms");
+        }
+    }
+
+    private static void Describe(Customer customer, string label)
+    {
+        Console.WriteLine($"{label}\t{customer.Id}: {customer.Orders.Count} [{customer.GetHashCode()}");
+    }
+
+    private static Customer InventCustomer(Random rand)
+    {
+        var c = new Customer
+        {
+            Id = rand.Next(100000),
+            MarketValue = rand.NextDouble() * 80000,
+            Name = CreateString(rand, 5, 20),
+            Notes = CreateString(rand, 0, 250),
+        };
+        int orders = rand.Next(50);
+        for (int i = 0; i < orders; i++)
+            c.Orders.Add(InventOrder(rand));
+        return c;
+    }
+    private static Order InventOrder(Random rand)
+    {
+        var o = new Order
+        {
+            Id = rand.Next(100000),
+            Notes = CreateString(rand, 10, 200),
+            ProductCode = CreateString(rand, 6, 6),
+            Quantity = rand.Next(50),
+            UnitPrice = rand.NextDouble() * 100
+        };
+        return o;
+    }
+
+    static readonly string Alphabet = new string(Enumerable.Range(32, 223).Select(i => (char)i).ToArray());
+    private static unsafe string CreateString(Random rand, int minLen, int maxLen)
+    {
+        int len = rand.Next(minLen, maxLen + 1);
+        if (len == 0) return "";
+        char* c = stackalloc char[len];
+        for (int i = 0; i < len; i++)
+            c[i] = Alphabet[rand.Next(0, Alphabet.Length)];
+        return new string(c, 0, len);
+    }
+
+    static void Main2()
     {
         try
         {

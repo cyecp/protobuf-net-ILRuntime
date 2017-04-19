@@ -68,6 +68,21 @@ namespace ProtoBuf
         protected abstract Task SkipBytesAsync(int bytes);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int ValueOrEOF(int? varint) => varint == null ? ThrowEOF<int>() : varint.GetValueOrDefault();
+
+        public virtual Task<bool> AssertNextField(int fieldNumber)
+        {
+            async Task<bool> Awaited(int expected, ValueTask<int?> task)
+            {
+                return (((await task) >> 3) == expected) && await ReadNextFieldAsync();
+            }
+            {
+                var field = TryReadVarintInt32Async(false);
+                if (!field.IsCompleted) return Awaited(fieldNumber, field);
+
+                return field.Result == fieldNumber ? ReadNextFieldAsync() : False;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         protected static T ThrowEOF<T>() => throw new EndOfStreamException();
         public virtual Task SkipFieldAsync()
@@ -103,6 +118,7 @@ namespace ProtoBuf
             }
         }
 
+        protected void SetFieldHeader(int fieldHeader) => _fieldHeader = fieldHeader;
         int _fieldHeader;
         public int FieldNumber => _fieldHeader >> 3;
 
@@ -199,7 +215,7 @@ namespace ProtoBuf
             return val.IsCompleted ? (val.Result != 0 ? True : False) : Awaited(val);
         }
         protected abstract ValueTask<byte[]> ReadBytesAsync(int bytes);
-        protected abstract ValueTask<int?> TryReadVarintInt32Async();
+        protected abstract ValueTask<int?> TryReadVarintInt32Async(bool consume = true);
 
         public ValueTask<string> ReadStringAsync()
         {

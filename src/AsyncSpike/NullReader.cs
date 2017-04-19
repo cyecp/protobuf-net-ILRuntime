@@ -4,7 +4,7 @@ namespace ProtoBuf
 {
     internal sealed class NullReader : AsyncProtoReader
     {
-        protected override ValueTask<int?> TryReadVarintInt32Async() => AsTask((int?)null);
+        protected override ValueTask<int?> TryReadVarintInt32Async(bool consume) => AsTask((int?)null);
 
         protected override ValueTask<string> ReadStringAsync(int bytes) => ThrowEOF<ValueTask<string>>();
 

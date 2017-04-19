@@ -21,5 +21,7 @@
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
     <!--<PackageReference Include="Microsoft.Net.Compilers" Version="$(RoslynVersion)" PrivateAssets="All" />-->
+
+    <ProjectReference Include="..\protobuf-net\protobuf-net.csproj" />
   </ItemGroup>
 </Project>

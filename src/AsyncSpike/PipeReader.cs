@@ -300,17 +300,20 @@ namespace ProtoBuf
                 Trace($"Data constraint imposed; {_available.Length} bytes available (was {wasForConsoleMessage})");
             }
         }
-        protected override ValueTask<int?> TryReadVarintInt32Async()
+        protected override ValueTask<int?> TryReadVarintInt32Async(bool consume)
         {
-            async ValueTask<int?> Awaited(Task<bool> task)
+            async ValueTask<int?> Awaited(Task<bool> task, bool consumeData)
             {
                 while(await task.ConfigureAwait(false))
                 {
                     var read = TryPeekVarintInt32(ref _available);
                     if (read.consumed != 0)
                     {
-                        Advance(read.consumed);
-                        _available = _available.Slice(read.consumed);
+                        if (consumeData)
+                        {
+                            Advance(read.consumed);
+                            _available = _available.Slice(read.consumed);
+                        }
                         return read.value;
                     }
 
@@ -326,13 +329,16 @@ namespace ProtoBuf
                 var read = TryPeekVarintInt32(ref _available);
                 if (read.consumed != 0)
                 {
-                    Advance(read.consumed);
-                    _available = _available.Slice(read.consumed);
+                    if (consume)
+                    {
+                        Advance(read.consumed);
+                        _available = _available.Slice(read.consumed);
+                    }
                     return AsTask<int?>(read.value);
                 }
 
                 more = RequestMoreDataAsync();
-                if (!more.IsCompleted) return Awaited(more);
+                if (!more.IsCompleted) return Awaited(more, consume);
             }
             while (more.Result);
 
