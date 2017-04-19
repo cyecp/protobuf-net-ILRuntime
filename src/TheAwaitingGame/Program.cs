@@ -102,6 +102,22 @@ namespace TheAwaitingGame
 
         [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM)]
         public ValueTask<double> ValueTaskDoubleAsync() => _book.GetTotalWorthValueTaskDoubleAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/await/task")]
+        public Task<int> TaskInt32AwaitAsync() => _book.GetTotalWorthTaskInt32AwaitAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/await/valuetask")]
+        public ValueTask<int> ValueTaskInt32AwaitAsync() => _book.GetTotalWorthValueTaskInt32AwaitAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/task/iscompleted")]
+        public Task<int> TaskInt32ManualCAsync() => _book.GetTotalWorthTaskInt32ManualCompletedAsync(REPEATS_PER_ITEM);
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/task/iscompletedsuccessfully")]
+        public Task<int> TaskInt32ManualCSAsync() => _book.GetTotalWorthTaskInt32ManualCompletedSuccessfullyAsync(REPEATS_PER_ITEM);
+
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/valuetask/iscompleted")]
+        public ValueTask<int> ValueTaskInt32ManualCAsync() => _book.GetTotalWorthValueTaskInt32ManualCompletedAsync(REPEATS_PER_ITEM);
+        [Benchmark(OperationsPerInvoke = REPEATS_PER_ITEM, Description = "int/manual/valuetask/iscompletedsuccessfully")]
+        public ValueTask<int> ValueTaskInt32ManualCSAsync() => _book.GetTotalWorthValueTaskInt32ManualCompletedSuccessfullyAsync(REPEATS_PER_ITEM);
     }
 
     public static class ValueTaskExtensions
@@ -268,6 +284,159 @@ namespace TheAwaitingGame
             }
             return total;
         }
+
+        internal async Task<int> GetTotalWorthTaskInt32AwaitAsync(int repeats)
+        {
+            int total = 0;
+            while (repeats-- > 0)
+            {
+                for (int i = 0; i < Orders.Count; i++)
+                {
+                    total += await Orders[i].GetOrderWorthTaskInt32AwaitAsync();
+                }
+            }
+            return total;
+        }
+        internal async ValueTask<int> GetTotalWorthValueTaskInt32AwaitAsync(int repeats)
+        {
+            int total = 0;
+            while (repeats-- > 0)
+            {
+                for (int i = 0; i < Orders.Count; i++)
+                {
+                    total += await Orders[i].GetOrderWorthValueTaskInt32AwaitAsync();
+                }
+            }
+            return total;
+        }
+        internal Task<int> GetTotalWorthTaskInt32ManualCompletedAsync(int repeats)
+        {
+            async Task<int> Awaited(Task<int> task, int total, int i, int r)
+            {
+                total += await task;
+                while (++i < Orders.Count) // finish the inner loop
+                {
+                    total += await Orders[i].GetOrderWorthTaskInt32ManualCompletedAsync();
+                }
+                while (r-- > 0) // finish the outer loop
+                {
+                    for (i = 0; i < Orders.Count; i++)
+                    {
+                        total += await Orders[i].GetOrderWorthTaskInt32ManualCompletedAsync();
+                    }
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                while (repeats-- > 0)
+                {
+                    for (int i = 0; i < Orders.Count; i++)
+                    {
+                        var task = Orders[i].GetOrderWorthTaskInt32ManualCompletedAsync();
+                        if (!task.IsCompleted) return Awaited(task, total, i, repeats);
+                        total += task.Result;
+                    }
+                }
+                return Task.FromResult(total);
+            }
+        }
+        internal Task<int> GetTotalWorthTaskInt32ManualCompletedSuccessfullyAsync(int repeats)
+        {
+            async Task<int> Awaited(Task<int> task, int total, int i, int r)
+            {
+                total += await task;
+                while (++i < Orders.Count) // finish the inner loop
+                {
+                    total += await Orders[i].GetOrderWorthTaskInt32ManualCompletedSuccessfullyAsync();
+                }
+                while (r-- > 0) // finish the outer loop
+                {
+                    for (i = 0; i < Orders.Count; i++)
+                    {
+                        total += await Orders[i].GetOrderWorthTaskInt32ManualCompletedSuccessfullyAsync();
+                    }
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                while (repeats-- > 0)
+                {
+                    for (int i = 0; i < Orders.Count; i++)
+                    {
+                        var task = Orders[i].GetOrderWorthTaskInt32ManualCompletedSuccessfullyAsync();
+                        if (task.Status != TaskStatus.RanToCompletion) return Awaited(task, total, i, repeats);
+                        total += task.Result;
+                    }
+                }
+                return Task.FromResult(total);
+            }
+        }
+        internal ValueTask<int> GetTotalWorthValueTaskInt32ManualCompletedAsync(int repeats)
+        {
+            async ValueTask<int> Awaited(ValueTask<int> task, int total, int i, int r)
+            {
+                total += await task;
+                while (++i < Orders.Count) // finish the inner loop
+                {
+                    total += await Orders[i].GetOrderWorthValueTaskInt32ManualCompletedAsync();
+                }
+                while (r-- > 0) // finish the outer loop
+                {
+                    for (i = 0; i < Orders.Count; i++)
+                    {
+                        total += await Orders[i].GetOrderWorthValueTaskInt32ManualCompletedAsync();
+                    }
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                while (repeats-- > 0)
+                {
+                    for (int i = 0; i < Orders.Count; i++)
+                    {
+                        var task = Orders[i].GetOrderWorthValueTaskInt32ManualCompletedAsync();
+                        if (!task.IsCompleted) return Awaited(task, total, i, repeats);
+                        total += task.Result;
+                    }
+                }
+                return new ValueTask<int>(total);
+            }
+        }
+        internal ValueTask<int> GetTotalWorthValueTaskInt32ManualCompletedSuccessfullyAsync(int repeats)
+        {
+            async ValueTask<int> Awaited(ValueTask<int> task, int total, int i, int r)
+            {
+                total += await task;
+                while (++i < Orders.Count) // finish the inner loop
+                {
+                    total += await Orders[i].GetOrderWorthValueTaskInt32ManualCompletedSuccessfullyAsync();
+                }
+                while (r-- > 0) // finish the outer loop
+                {
+                    for (i = 0; i < Orders.Count; i++)
+                    {
+                        total += await Orders[i].GetOrderWorthValueTaskInt32ManualCompletedSuccessfullyAsync();
+                    }
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                while (repeats-- > 0)
+                {
+                    for (int i = 0; i < Orders.Count; i++)
+                    {
+                        var task = Orders[i].GetOrderWorthValueTaskInt32ManualCompletedSuccessfullyAsync();
+                        if (!task.IsCompletedSuccessfully) return Awaited(task, total, i, repeats);
+                        total += task.Result;
+                    }
+                }
+                return new ValueTask<int>(total);
+            }
+        }
     }
     class Order
     {
@@ -388,6 +557,114 @@ namespace TheAwaitingGame
 
             return total;
         }
+
+        internal async Task<int> GetOrderWorthTaskInt32AwaitAsync()
+        {
+            int total = 0;
+            for (int i = 0; i < Lines.Count; i++)
+            {
+                total += await Lines[i].GetLineWorthInt32TaskAsync();
+            }
+            return total;
+        }
+        internal async ValueTask<int> GetOrderWorthValueTaskInt32AwaitAsync()
+        {
+            int total = 0;
+            for (int i = 0; i < Lines.Count; i++)
+            {
+                total += await Lines[i].GetLineWorthInt32ValueTaskAsync();
+            }
+            return total;
+        }
+
+        internal Task<int> GetOrderWorthTaskInt32ManualCompletedAsync()
+        {
+            async Task<int> Awaited(Task<int> task, int total, int i)
+            {
+                total += await task;
+                while (++i < Lines.Count)
+                {
+                    total += await Lines[i].GetLineWorthInt32TaskAsync();
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    var task = Lines[i].GetLineWorthInt32TaskAsync();
+                    if (!task.IsCompleted) return Awaited(task, total, i);
+                    total += task.Result;
+                }
+                return Task.FromResult(total);
+            }
+        }
+        internal Task<int> GetOrderWorthTaskInt32ManualCompletedSuccessfullyAsync()
+        {
+            async Task<int> Awaited(Task<int> task, int total, int i)
+            {
+                total += await task;
+                while (++i < Lines.Count)
+                {
+                    total += await Lines[i].GetLineWorthInt32TaskAsync();
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    var task = Lines[i].GetLineWorthInt32TaskAsync();
+                    if (task.Status != TaskStatus.RanToCompletion) return Awaited(task, total, i);
+                    total += task.Result;
+                }
+                return Task.FromResult(total);
+            }
+        }
+        internal ValueTask<int> GetOrderWorthValueTaskInt32ManualCompletedAsync()
+        {
+            async ValueTask<int> Awaited(ValueTask<int> task, int total, int i)
+            {
+                total += await task;
+                while (++i < Lines.Count)
+                {
+                    total += await Lines[i].GetLineWorthInt32ValueTaskAsync();
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    var task = Lines[i].GetLineWorthInt32ValueTaskAsync();
+                    if (!task.IsCompleted) return Awaited(task, total, i);
+                    total += task.Result;
+                }
+                return new ValueTask<int>(total);
+            }
+        }
+        internal ValueTask<int> GetOrderWorthValueTaskInt32ManualCompletedSuccessfullyAsync()
+        {
+            async ValueTask<int> Awaited(ValueTask<int> task, int total, int i)
+            {
+                total += await task;
+                while (++i < Lines.Count)
+                {
+                    total += await Lines[i].GetLineWorthInt32ValueTaskAsync();
+                }
+                return total;
+            }
+            {
+                int total = 0;
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    var task = Lines[i].GetLineWorthInt32ValueTaskAsync();
+                    if (!task.IsCompletedSuccessfully) return Awaited(task, total, i);
+                    total += task.Result;
+                }
+                return new ValueTask<int>(total);
+            }
+        }
     }
     public class OrderLine
     {
@@ -405,6 +682,10 @@ namespace TheAwaitingGame
         public ValueTask<double> GetLineWorthValueTaskDoubleAsync() => new ValueTask<double>((double)(Quantity * UnitPrice));
 
         public Task<double> GetLineWorthTaskDoubleAsync() => Task.FromResult<double>((double)(Quantity * UnitPrice));
+
+        internal Task<int> GetLineWorthInt32TaskAsync() => Task.FromResult(Quantity);
+
+        internal ValueTask<int> GetLineWorthInt32ValueTaskAsync() => new ValueTask<int>(Quantity);
     }
     public class DecimalReference
     {
