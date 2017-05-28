@@ -506,6 +506,21 @@ namespace ProtoBuf.Meta
                 return key;
             }
 
+            // run the cctor (if one and not already run), and try again; the
+            // cctor might be trying to configure things
+            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+            key = types.IndexOf(MetaTypeFinder, type);
+            if (key >= 0)
+            {
+                metaType = (MetaType)types[key];
+                if (metaType.Pending)
+                {
+                    WaitOnLock(metaType);
+                }
+                return key;
+            }
+
+
             // the fast fail path: types that will never have a meta-type
             bool shouldAdd = AutoAddMissingTypes || addEvenIfAutoDisabled;
 
@@ -631,6 +646,13 @@ namespace ProtoBuf.Meta
             if (type == null) throw new ArgumentNullException("type");
             MetaType newType = FindWithoutAdd(type);
             if (newType != null) return newType; // return existing
+
+            // run the cctor (if one and not already run), and try again; the
+            // cctor might be trying to configure things
+            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+            newType = FindWithoutAdd(type);
+            if (newType != null) return newType; // return existing
+
             int opaqueToken = 0;
 
 #if WINRT || COREFX

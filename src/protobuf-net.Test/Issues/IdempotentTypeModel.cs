@@ -1,12 +1,41 @@
 ﻿using ProtoBuf.Meta;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Xunit;
 
 namespace ProtoBuf.Issues
 {
     public class IdempotentTypeModel
     {
+        [Fact]
+        public void CctorTimingImpact()
+        {
+            using (var ms = new MemoryStream())
+            {
+                var model = TypeModel.Create(); // so we don't break the other test
+                model[typeof(ProtoList<string>)][1].SupportNull = true;
+                model.Serialize(ms, new ProtoList<string> { List = new[] { "abc", "def" } });
+
+                ms.Position = 0;
+                var clone = Serializer.Deserialize<EvilProtoList<string>>(ms);
+                Assert.Equal("abc,def", string.Join(",", clone.List));
+            }
+        }
+
+        [ProtoContract]
+        public class EvilProtoList<T>
+        {
+            [ProtoMember(1, IsRequired = false, Name = @"List", DataFormat = ProtoBuf.DataFormat.Default)]
+            [System.ComponentModel.DefaultValue(null)]
+            public IList<T> List { get; set; }
+
+            static EvilProtoList()
+            {
+                RuntimeTypeModel.Default[typeof(EvilProtoList<T>)][1].SupportNull = true;
+            }
+        }
+
         [Fact]
         public void ChangingSupportNullToSameValueWorks()
         {
