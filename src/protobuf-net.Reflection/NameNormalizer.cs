@@ -52,21 +52,22 @@ namespace ProtoBuf.Reflection
         /// </summary>
         protected static string AutoCapitalize(string identifier)
         {
-            if (string.IsNullOrEmpty(identifier)) return identifier;
-            // if all upper-case, make proper-case
-            if (Regex.IsMatch(identifier, @"^[_A-Z0-9]*$"))
-            {
-                return Regex.Replace(identifier, @"(^|_)([A-Z0-9])([A-Z0-9]*)",
-                    match => match.Groups[2].Value.ToUpperInvariant() + match.Groups[3].Value.ToLowerInvariant());
-            }
-            // if all lower-case, make proper case
-            if (Regex.IsMatch(identifier, @"^[_a-z0-9]*$"))
-            {
-                return Regex.Replace(identifier, @"(^|_)([a-z0-9])([a-z0-9]*)",
-                    match => match.Groups[2].Value.ToUpperInvariant() + match.Groups[3].Value.ToLowerInvariant());
-            }
-            // just remove underscores - leave their chosen casing alone
-            return identifier.Replace("_", "");
+            //if (string.IsNullOrEmpty(identifier)) return identifier;
+            //// if all upper-case, make proper-case
+            //if (Regex.IsMatch(identifier, @"^[_A-Z0-9]*$"))
+            //{
+            //    return Regex.Replace(identifier, @"(^|_)([A-Z0-9])([A-Z0-9]*)",
+            //        match => match.Groups[2].Value.ToUpperInvariant() + match.Groups[3].Value.ToLowerInvariant());
+            //}
+            //// if all lower-case, make proper case
+            //if (Regex.IsMatch(identifier, @"^[_a-z0-9]*$"))
+            //{
+            //    return Regex.Replace(identifier, @"(^|_)([a-z0-9])([a-z0-9]*)",
+            //        match => match.Groups[2].Value.ToUpperInvariant() + match.Groups[3].Value.ToLowerInvariant());
+            //}
+            //// just remove underscores - leave their chosen casing alone
+            //return identifier.Replace("_", "");
+            return identifier;
         }
         /// <summary>
         /// Suggest a name with idiomatic pluralization

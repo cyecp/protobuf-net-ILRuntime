@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="15.0">
   <PropertyGroup>
     <VersionPrefix>$(ProtoGenVersion)</VersionPrefix>
     <AssemblyName>protobuf-net.Reflection</AssemblyName>
@@ -8,6 +8,9 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Configurations>Debug;Release;VS</Configurations>
+    <FileUpgradeFlags>40</FileUpgradeFlags>
+    <UpgradeBackupLocation>C:\Users\lclly\Desktop\protobuf-net\src\Backup\protobuf-net.Reflection\</UpgradeBackupLocation>
+    <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'VS'">
     <!--

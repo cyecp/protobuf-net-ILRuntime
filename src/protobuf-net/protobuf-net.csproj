@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="15.0">
   <PropertyGroup>
     <AssemblyName>protobuf-net</AssemblyName>
     <Title>protobuf-net</Title>
@@ -9,7 +9,6 @@
     <DefineConstants>EMIT_ASSEMBLY_INFO</DefineConstants>
     <!-- new build tools spit these out -->
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-
     <!-- this is how we will configure the builds relatively cleanly -->
     <ImportLibs>net</ImportLibs>
     <FeatureCompiler>true</FeatureCompiler>
@@ -17,6 +16,9 @@
     <PlatformXmlSerializer>true</PlatformXmlSerializer>
     <PlatformBinaryFormatter>true</PlatformBinaryFormatter>
     <Configurations>Debug;Release;VS</Configurations>
+    <FileUpgradeFlags>40</FileUpgradeFlags>
+    <UpgradeBackupLocation>C:\Users\lclly\Desktop\protobuf-net\src\Backup\protobuf-net\</UpgradeBackupLocation>
+    <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'VS'">
     <TargetFrameworks>net40;netstandard1.3;net20;net35</TargetFrameworks>
@@ -30,7 +32,6 @@
     <ImportLibs>core</ImportLibs>
     <FeatureServiceModel>false</FeatureServiceModel>
   </PropertyGroup>
-
   <!-- apply the configuration options (typical via defines that switch code flows) -->
   <PropertyGroup Condition="'$(FeatureCompiler)' == 'true'">
     <DefineConstants>$(DefineConstants);FEAT_COMPILER</DefineConstants>

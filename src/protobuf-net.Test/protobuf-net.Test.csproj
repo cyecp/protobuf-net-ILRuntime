@@ -1,10 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="15.0">
   <PropertyGroup>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <TargetFrameworks>netcoreapp1.1;net452</TargetFrameworks>
     <LibImport>net</LibImport>
     <Configurations>Debug;Release;VS</Configurations>
+    <FileUpgradeFlags>40</FileUpgradeFlags>
+    <UpgradeBackupLocation>C:\Users\lclly\Desktop\protobuf-net\src\Backup\protobuf-net.Test\</UpgradeBackupLocation>
+    <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="$(TargetFramework)=='netcoreapp1.1'">
     <DefineConstants>FEAT_COMPILER;NO_NHIBERNATE;COREFX;NO_INTERNAL_CONTEXT</DefineConstants>
@@ -58,7 +60,7 @@
     <None Update="Schemas\google\**\*.proto">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-        <None Update="Schemas\protobuf-net\**\*.proto">
+    <None Update="Schemas\protobuf-net\**\*.proto">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Schemas\*.proto">

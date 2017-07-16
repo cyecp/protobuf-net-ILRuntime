@@ -148,6 +148,19 @@ namespace ProtoBuf.Reflection
             {
                 ctx.Outdent().WriteLine("}").WriteLine();
             }
+            var @filename = file.Name.Substring(0, file.Name.IndexOf("."));
+            ctx.WriteLine($"class ILRuntime_Initlize_{@filename}");
+            ctx.WriteLine("{").Indent();
+            ctx.WriteLine($"static ILRuntime_Initlize_{@filename}()");
+            ctx.WriteLine("{");
+            ctx.WriteLine().Indent();
+            foreach(var T in MemberTypes)
+            {
+                ctx.WriteLine($@"ProtobufPropertyHelper.RegisterListMemberType(""{T}"", typeof({T}));");
+            }
+            ctx.WriteLine().Outdent();
+            ctx.WriteLine("}").Outdent();
+            ctx.WriteLine("}").WriteLine();
             ctx.WriteLine("#pragma warning restore CS1591, CS0612, CS3021");
         }
         /// <summary>
@@ -244,6 +257,12 @@ namespace ProtoBuf.Reflection
                 default: return base.GetAccess(access);
             }
         }
+        static HashSet<string> MemberTypes = new HashSet<string>();
+        static string GetMemberTypeIndex(string type) {
+            if (type.StartsWith(".")) { type = type.Substring(1); }
+            MemberTypes.Add(type);
+            return type;
+        }
         /// <summary>
         /// Write a field
         /// </summary>
@@ -267,7 +286,10 @@ namespace ProtoBuf.Reflection
 
             bool isOptional = obj.label == FieldDescriptorProto.Label.LabelOptional;
             bool isRepeated = obj.label == FieldDescriptorProto.Label.LabelRepeated;
-
+            if (isRepeated && obj.type == FieldDescriptorProto.Type.TypeMessage)
+            {
+                tw.Write($@", MemberTypeIndex = ""{GetMemberTypeIndex(obj.TypeName)}""");
+            }
             OneOfStub oneOf = obj.ShouldSerializeOneofIndex() ? oneOfs?[obj.OneofIndex] : null;
             if (oneOf != null && oneOf.CountTotal == 1)
             {
