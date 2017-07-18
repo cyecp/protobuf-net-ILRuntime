@@ -130,3 +130,12 @@ This done using the precompiler. [Additional guidance can be found here](http://
 
 In v2, everything that can be done with attributes can also be configured at runtime via RuntimeTypeModel. The Serializer.* methods are basically just shortcuts to RuntimeTypeModel.Default.*, so to manipulate the behaviour of Serializer.*, you must configure RuntimeTypeModel.Default. 
 
+
+
+
+支持ILRuntime
+Unity中使用 需要注册一下 
+Type.GetType("ProtoBuf.PType").GetMethod("RegisterDomain",BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { _this_AppDomain });
+
+Dll 中使用 参考 hotfix目录下main.cs
+
