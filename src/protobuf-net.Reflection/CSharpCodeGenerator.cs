@@ -154,15 +154,15 @@ namespace ProtoBuf.Reflection
             ctx.WriteLine($"static ILRuntime_{@filename}()");
             ctx.WriteLine("{");
             ctx.WriteLine().Indent();
-            ctx.WriteLine($"Initlize();");
+            ctx.WriteLine($"//Initlize();");
             ctx.WriteLine().Outdent();
             ctx.WriteLine("}");
             ctx.WriteLine($"public static void Initlize()");
             ctx.WriteLine("{");
             ctx.WriteLine().Indent();
-            foreach(var T in MemberTypes)
+            foreach(var T in TypeNames2)
             {
-                ctx.WriteLine($@"ProtoBuf.ProtobufPropertyHelper.RegisterMemberType(""{T}"", typeof({T}));");
+                ctx.WriteLine($@"ProtoBuf.PType.RegisterType(""{T}"", typeof({T}));");
             }
             ctx.WriteLine().Outdent();
             ctx.WriteLine("}").Outdent();
@@ -175,6 +175,7 @@ namespace ProtoBuf.Reflection
         protected override void WriteEnumHeader(GeneratorContext ctx, EnumDescriptorProto obj, ref object state)
         {
             var name = ctx.NameNormalizer.GetName(obj);
+            GetTypeName2(obj.Name);
             var tw = ctx.Write($@"[global::ProtoBuf.ProtoContract(");
             if (name != obj.Name) tw.Write($@"Name = @""{obj.Name}""");
             tw.WriteLine(")]");
@@ -263,10 +264,10 @@ namespace ProtoBuf.Reflection
                 default: return base.GetAccess(access);
             }
         }
-        static HashSet<string> MemberTypes = new HashSet<string>();
-        static string GetMemberTypeIndex(string type) {
+        static HashSet<string> TypeNames2 = new HashSet<string>();
+        static string GetTypeName2(string type) {
             if (type.StartsWith(".")) { type = type.Substring(1); }
-            MemberTypes.Add(type);
+            TypeNames2.Add(type);
             return type;
         }
         /// <summary>
@@ -294,7 +295,7 @@ namespace ProtoBuf.Reflection
             bool isRepeated = obj.label == FieldDescriptorProto.Label.LabelRepeated;
             if (isRepeated && obj.type == FieldDescriptorProto.Type.TypeMessage)
             {
-                tw.Write($@", MemberTypeIndex = ""{GetMemberTypeIndex(obj.TypeName)}""");
+                tw.Write($@", TypeName = ""{GetTypeName2(obj.TypeName)}""");
             }
             OneOfStub oneOf = obj.ShouldSerializeOneofIndex() ? oneOfs?[obj.OneofIndex] : null;
             if (oneOf != null && oneOf.CountTotal == 1)
