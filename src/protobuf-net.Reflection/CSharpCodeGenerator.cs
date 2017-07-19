@@ -175,7 +175,6 @@ namespace ProtoBuf.Reflection
         protected override void WriteEnumHeader(GeneratorContext ctx, EnumDescriptorProto obj, ref object state)
         {
             var name = ctx.NameNormalizer.GetName(obj);
-            GetTypeName2(obj.Name);
             var tw = ctx.Write($@"[global::ProtoBuf.ProtoContract(");
             if (name != obj.Name) tw.Write($@"Name = @""{obj.Name}""");
             tw.WriteLine(")]");
@@ -220,6 +219,7 @@ namespace ProtoBuf.Reflection
         protected override void WriteMessageHeader(GeneratorContext ctx, DescriptorProto obj, ref object state)
         {
             var name = ctx.NameNormalizer.GetName(obj);
+            GetTypeName2(obj.FullyQualifiedName);
             var tw = ctx.Write($@"[global::ProtoBuf.ProtoContract(");
             if (name != obj.Name) tw.Write($@"Name = @""{obj.Name}""");
             tw.WriteLine(")]");
