@@ -986,8 +986,10 @@ namespace ProtoBuf
         /// Reads the length-prefix of a message from a stream without buffering additional data, allowing a fixed-length
         /// reader to be created.
         /// </summary>
-        public static int ReadLengthPrefix(Stream source, bool expectHeader, PrefixStyle style, out int fieldNumber)
-            => ReadLengthPrefix(source, expectHeader, style, out fieldNumber, out int bytesRead);
+		public static int ReadLengthPrefix(Stream source, bool expectHeader, PrefixStyle style, out int fieldNumber){
+			int bytesRead;
+            return ReadLengthPrefix(source, expectHeader, style, out fieldNumber, out bytesRead);
+		}
 
         /// <summary>
         /// Reads a little-endian encoded integer. An exception is thrown if the data is not all available.
@@ -1014,7 +1016,8 @@ namespace ProtoBuf
         /// </summary>
         public static int DirectReadVarintInt32(Stream source)
         {
-            int bytes = TryReadUInt64Variant(source, out ulong val);
+			ulong val;
+            int bytes = TryReadUInt64Variant(source, out val);
             if (bytes <= 0) throw EoF(null);
             return checked((int)val);
         }

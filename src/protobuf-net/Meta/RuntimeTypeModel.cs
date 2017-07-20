@@ -344,7 +344,8 @@ namespace ProtoBuf.Meta
                         Type type = member.ItemType;
                         if(member.IsMap)
                         {
-                            member.ResolveMapTypes(out _, out _, out type); // don't need key-type
+							Type dictionaryType, keyType;
+							member.ResolveMapTypes(out dictionaryType, out keyType, out type); // don't need key-type
                         }
                         if (type == null) type = member.MemberType;
                         WireType defaultWireType;
@@ -826,7 +827,7 @@ namespace ProtoBuf.Meta
             //Helpers.DebugWriteLine("Deserialize", value);
             IProtoSerializer ser = ((MetaType)types[key]).Serializer;
             if (value == null && Helpers.IsValueType(ser.ExpectedType)) {
-                if(ser.RequiresOldValue) value = Activator.CreateInstance(ser.ExpectedType);
+				if(ser.RequiresOldValue) value = PType.CreateInstance(ser.ExpectedType);
                 return ser.Read(value, source);
             } else {
                 return ser.Read(value, source);

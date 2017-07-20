@@ -26,7 +26,7 @@ namespace ProtoBuf
 				m_types.Add(metaIndex,type);
             }
             else
-                throw new SystemException(string.Format("PropertyMeta : {0} is registered!",metaIndex));
+                throw new Exception(string.Format("PropertyMeta : {0} is registered!",metaIndex));
         }
 
         Type FindMemberTypeInternal(string metaIndex)
@@ -34,7 +34,7 @@ namespace ProtoBuf
 			Type type = null;
 			if (!m_types.TryGetValue(metaIndex, out type))
 			{
-				throw new SystemException(string.Format("PropertyMeta : {0} is not registered!", metaIndex));
+				throw new Exception(string.Format("PropertyMeta : {0} is not registered!", metaIndex));
 			}
 			return type;
 		}

@@ -104,6 +104,7 @@ namespace ProtoBuf
                 RuntimeTypeModel.Default.Serialize(destination, instance);
             }
         }
+
         /// <summary>
         /// Serializes a given instance and deserializes it as a different type;
         /// this can be used to translate between wire-compatible objects (where

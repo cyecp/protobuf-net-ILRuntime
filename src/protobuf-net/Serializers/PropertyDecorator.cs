@@ -72,7 +72,6 @@ namespace ProtoBuf.Serializers
         public override object Read(object value, ProtoReader source)
         {
             Helpers.DebugAssert(value != null);
-
             object oldVal = Tail.RequiresOldValue ? property.GetValue(value, null) : null;
             object newVal = Tail.Read(oldVal, source);
             if (readOptionsWriteValue && newVal != null) // if the tail returns a null, intepret that as *no assign*

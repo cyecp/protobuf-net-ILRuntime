@@ -3,7 +3,7 @@
     <AssemblyName>protobuf-net</AssemblyName>
     <Title>protobuf-net</Title>
     <Description>Provides simple access to fast and efficient "Protocol Buffers" serialization from .NET applications</Description>
-    <TargetFrameworks>net40;netstandard1.3</TargetFrameworks>
+    <TargetFrameworks>net46;netstandard1.3</TargetFrameworks>
     <!--net20;net35;-->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>EMIT_ASSEMBLY_INFO</DefineConstants>
@@ -16,17 +16,16 @@
     <PlatformXmlSerializer>true</PlatformXmlSerializer>
     <PlatformBinaryFormatter>true</PlatformBinaryFormatter>
     <Configurations>Debug;Release;VS</Configurations>
-    <FileUpgradeFlags>40</FileUpgradeFlags>
+    <FileUpgradeFlags>46</FileUpgradeFlags>
     <UpgradeBackupLocation>C:\Users\lclly\Desktop\protobuf-net\src\Backup\protobuf-net\</UpgradeBackupLocation>
     <OldToolsVersion>2.0</OldToolsVersion>
+    <AssemblyOriginatorKeyFile>../ProtoBuf.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>True</SignAssembly>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'VS'">
-    <TargetFrameworks>net40;netstandard1.3;net20;net35</TargetFrameworks>
+    <TargetFrameworks>net46;netstandard1.3</TargetFrameworks>
   </PropertyGroup>
   <!-- define configuration per-platform -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net20'">
-    <FeatureServiceModel>false</FeatureServiceModel>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
     <DefineConstants>$(DefineConstants);COREFX</DefineConstants>
     <ImportLibs>core</ImportLibs>

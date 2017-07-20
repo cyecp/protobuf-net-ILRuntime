@@ -174,7 +174,7 @@ namespace protogen
         }
         static string GetVersion<T>()
         {
-#if NETCOREAPP1_1
+#if NETCOREAPP1_3
             var attrib = typeof(T).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
 #else
             var attribs = typeof(T).Assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false);

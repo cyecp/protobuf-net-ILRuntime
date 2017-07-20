@@ -114,22 +114,6 @@ namespace ProtoBuf.Serializers
             }
         }
 
-        private bool CanUsePackedPrefix() => CanUsePackedPrefix(packedWireType, itemType);
-        internal static bool CanUsePackedPrefix(WireType packedWireType,  Type itemType)
-        {
-            // needs to be a suitably simple type *and* be definitely not nullable
-            switch(packedWireType)
-            {
-                case WireType.Fixed32:
-                case WireType.Fixed64:
-                    break;
-                default:
-                    return false; // nope
-            }
-            if (!Helpers.IsValueType(itemType)) return false;
-            return Helpers.GetUnderlyingType(itemType) == null;
-        }
-
         private void EmitWriteArrayLoop(Compiler.CompilerContext ctx, Compiler.Local i, Compiler.Local arr)
         {
             // i = 0
@@ -165,6 +149,25 @@ namespace ProtoBuf.Serializers
             ctx.BranchIfLess(processItem, false);
         }
 #endif
+
+		private bool CanUsePackedPrefix() { 
+			return CanUsePackedPrefix (packedWireType, itemType);
+		}
+		internal static bool CanUsePackedPrefix(WireType packedWireType,  Type itemType)
+		{
+			// needs to be a suitably simple type *and* be definitely not nullable
+			switch(packedWireType)
+			{
+			case WireType.Fixed32:
+			case WireType.Fixed64:
+				break;
+			default:
+				return false; // nope
+			}
+			if (!Helpers.IsValueType(itemType)) return false;
+			return Helpers.GetUnderlyingType(itemType) == null;
+		}
+
         private bool AppendToCollection
         {
             get { return (options & OPTIONS_OverwriteList) == 0; }

@@ -145,9 +145,8 @@ namespace ProtoBuf.Serializers
         private IProtoSerializer GetMoreSpecificSerializer(object value)
         {
             if (!CanHaveInheritance) return null;
-            Type actualType = value.GetType();
+			Type actualType = PType.GetPType(value);
             if (actualType == forType) return null;
-           
             for (int i = 0; i < serializers.Length; i++)
             {
                 IProtoSerializer ser = serializers[i];
@@ -220,7 +219,6 @@ namespace ProtoBuf.Serializers
                                 value = ProtoReader.Merge(source, value, ((IProtoTypeSerializer)ser).CreateInstance(source));
                             }
                         }
-
                         if (ser.ReturnsValue) {
                             value = ser.Read(value, source);
                         } else { // pop
@@ -311,11 +309,7 @@ namespace ProtoBuf.Serializers
             else if (useConstructor)
             {
                 if (!hasConstructor) TypeModel.ThrowCannotCreateInstance(constructType);
-                obj = Activator.CreateInstance(constructType
-#if !(CF || SILVERLIGHT || WINRT || PORTABLE || NETSTANDARD1_3 || NETSTANDARD1_4)
-                    , nonPublic: true
-#endif
-                    );
+				obj = PType.CreateInstance(constructType);
             }
             else
             {
@@ -328,6 +322,8 @@ namespace ProtoBuf.Serializers
                 }
             }
             if (includeLocalCallback && callbacks != null) InvokeCallback(callbacks.BeforeDeserialize, obj, source.Context);
+			if (obj == null)
+				throw new ProtoException ("obj is null.");
             return obj;
         }
 #endif

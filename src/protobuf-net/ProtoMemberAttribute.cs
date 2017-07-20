@@ -77,6 +77,10 @@ namespace ProtoBuf
         private int tag;
         internal void Rebase(int tag) { this.tag = tag; }
 
+
+		public string TypeName { get { return typeName; } set { typeName = value; } }
+		private string typeName;
+
         /// <summary>
         /// Gets or sets a value indicating whether this member is mandatory.
         /// </summary>

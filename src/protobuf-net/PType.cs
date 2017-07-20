@@ -26,7 +26,7 @@ namespace ProtoBuf{
 				m_Types.Add(metaName,type);
 	        }
 	        else
-				throw new SystemException(string.Format("PropertyMeta : {0} is registered!",metaName));
+				throw new Exception(string.Format("PropertyMeta : {0} is registered!",metaName));
 	    }
 
 		Type FindTypeInternal(string metaName)
@@ -34,7 +34,7 @@ namespace ProtoBuf{
 			Type type = null;
 			if (!m_Types.TryGetValue(metaName, out type))
 			{
-				throw new SystemException(string.Format("PropertyMeta : {0} is not registered!", metaName));
+				throw new Exception(string.Format("PropertyMeta : {0} is not registered!", metaName));
 			}
 			return type;
 		}
@@ -44,8 +44,15 @@ namespace ProtoBuf{
 			Current.RegisterTypeInternal(metaName, type);
 	    }
 
-		static void RegisterDomain(ILRuntime.Runtime.Enviorment.AppDomain domain){
-			appDomain = domain;
+		public delegate object DelegateFunctionCreateInstance(string typeName);
+		static DelegateFunctionCreateInstance CreateInstanceFunc;
+		public static void RegisterFunctionCreateInstance(DelegateFunctionCreateInstance func){
+			CreateInstanceFunc = func;
+		}
+		public delegate Type DelegateFunctionGetRealType(object o);
+		static DelegateFunctionGetRealType GetRealTypeFunc;
+		public static void RegisterFunctionGetRealType(DelegateFunctionGetRealType func){
+			GetRealTypeFunc = func;
 		}
 
 		public static Type FindType(string metaName)
@@ -53,10 +60,11 @@ namespace ProtoBuf{
 			return Current.FindTypeInternal(metaName);
 		}
 
-		static ILRuntime.Runtime.Enviorment.AppDomain appDomain;
 		public static object CreateInstance(Type type){
 			if (Type.GetType (type.FullName) == null) {
-				return appDomain.Instantiate (type.FullName);
+				if (CreateInstanceFunc != null) {
+					return CreateInstanceFunc.Invoke(type.FullName);
+				}
 			}
 			return Activator.CreateInstance (type
 				#if !(CF || SILVERLIGHT || WINRT || PORTABLE || NETSTANDARD1_3 || NETSTANDARD1_4)
@@ -64,16 +72,11 @@ namespace ProtoBuf{
 				#endif
 			);
 		}
-	}
-
-	public static class __PTypeHelper{
-		public static Type GetPType(this object o){
-			var type = o.GetType ();
-			if (type.FullName == "ILRuntime.Runtime.Intepreter.ILTypeInstance") {
-				var ins = o as ILRuntime.Runtime.Intepreter.ILTypeInstance;
-				type = PType.FindType (ins.Type.FullName);
+		public static Type GetPType(object o){
+			if (GetRealTypeFunc != null) {
+				return GetRealTypeFunc.Invoke (o);
 			}
-			return type;
+			return o.GetType ();
 		}
 	}
 }

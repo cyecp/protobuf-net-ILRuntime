@@ -120,7 +120,6 @@ namespace ProtoBuf.Meta
         /// </summary>
         internal ValueMember(RuntimeTypeModel model, int fieldNumber, Type memberType, Type itemType, Type defaultType, DataFormat dataFormat) 
         {
-
             if (memberType == null) throw new ArgumentNullException("memberType");
             if (model == null) throw new ArgumentNullException("model");
             this.fieldNumber = fieldNumber;
@@ -154,10 +153,36 @@ namespace ProtoBuf.Meta
         }
         private static object ParseDefaultValue(Type type, object value)
         {
+			if(true)
             {
                 Type tmp = Helpers.GetUnderlyingType(type);
                 if (tmp != null) type = tmp;
             }
+			switch (Helpers.GetTypeCode(type))
+			{
+			case ProtoTypeCode.Boolean: 
+			case ProtoTypeCode.Byte: 
+			case ProtoTypeCode.Char: // char.Parse missing on CF/phone7
+			case ProtoTypeCode.DateTime: 
+			case ProtoTypeCode.Decimal: 
+			case ProtoTypeCode.Double: 
+			case ProtoTypeCode.Int16: 
+			case ProtoTypeCode.Int32: 
+			case ProtoTypeCode.Int64: 
+			case ProtoTypeCode.SByte: 
+			case ProtoTypeCode.Single: 
+			case ProtoTypeCode.String:
+			case ProtoTypeCode.UInt16:
+			case ProtoTypeCode.UInt32:
+			case ProtoTypeCode.UInt64:
+			case ProtoTypeCode.TimeSpan:
+			case ProtoTypeCode.Uri:
+			case ProtoTypeCode.Guid:
+				{
+					value = value + "";
+				}
+				break;
+			}
             if (value is string)
             {
                 string s = (string)value;
@@ -391,7 +416,8 @@ namespace ProtoBuf.Meta
 #else
             var info = memberType;
 #endif
-            if(ImmutableCollectionDecorator.IdentifyImmutable(model, MemberType, out _, out _, out _, out _))
+			MethodInfo b, a, ar, f;
+            if(ImmutableCollectionDecorator.IdentifyImmutable(model, MemberType, out b, out a, out ar, out f))
             {
                 return false;
             }
@@ -470,7 +496,8 @@ namespace ProtoBuf.Meta
                 IProtoSerializer ser;
                 if (IsMap)
                 {
-                    ResolveMapTypes(out var dictionaryType, out var keyType, out var valueType);
+					Type dictionaryType,keyType,valueType;
+                    ResolveMapTypes(out dictionaryType, out keyType, out valueType);
 
                     if (dictionaryType == null)
                     {
@@ -481,12 +508,14 @@ namespace ProtoBuf.Meta
                     {
                         concreteType = memberType;
                     }
-                    var keySer = TryGetCoreSerializer(model, MapKeyFormat, keyType, out var keyWireType, false, false, false, false);
+					WireType keyWireType;
+                    var keySer = TryGetCoreSerializer(model, MapKeyFormat, keyType, out keyWireType, false, false, false, false);
                     if(!AsReference)
                     {
                         AsReference = MetaType.GetAsReferenceDefault(model, valueType);
                     }
-                    var valueSer = TryGetCoreSerializer(model, MapValueFormat, valueType, out var valueWireType, AsReference, DynamicType, false, true);
+					WireType valueWireType;
+                    var valueSer = TryGetCoreSerializer(model, MapValueFormat, valueType, out valueWireType, AsReference, DynamicType, false, true);
 
                     var ctors = typeof(MapDecorator<,,>).MakeGenericType(new Type[] { dictionaryType, keyType, valueType }).GetConstructors(
                         BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);

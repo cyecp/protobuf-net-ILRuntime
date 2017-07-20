@@ -105,7 +105,8 @@ namespace ProtoBuf.Meta
 
             ProtoTypeCode typecode = Helpers.GetTypeCode(type);
             // note the "ref type" here normalizes against proxies
-            WireType wireType = GetWireType(typecode, format, ref type, out int modelKey);
+			int modelKey;
+            WireType wireType = GetWireType(typecode, format, ref type, out modelKey);
 
 
             if (modelKey >= 0)
@@ -171,8 +172,9 @@ namespace ProtoBuf.Meta
             Helpers.DebugAssert(wireType == WireType.None);
 
             // now attempt to handle sequences (including arrays and lists)
-            if (value is IEnumerable sequence)
+            if (value is IEnumerable)
             {
+				var sequence = value as IEnumerable;
                 if (isInsideList) throw CreateNestedListsNotSupported(parentList?.GetType());
                 foreach (object item in sequence)
                 {
@@ -188,8 +190,12 @@ namespace ProtoBuf.Meta
         }
         private void SerializeCore(ProtoWriter writer, object value)
         {
+			SerializeCore(writer, PType.GetPType(value), value);
+        }
+
+        private void SerializeCore(ProtoWriter writer, Type type, object value)
+        {
             if (value == null) throw new ArgumentNullException("value");
-            Type type = value.GetType();
             int key = GetKey(ref type);
             if (key >= 0)
             {
@@ -210,6 +216,7 @@ namespace ProtoBuf.Meta
         {
             Serialize(dest, value, null);
         }
+
         /// <summary>
         /// Writes a protocol-buffer representation of the given instance to the supplied stream.
         /// </summary>
@@ -260,8 +267,10 @@ namespace ProtoBuf.Meta
         /// <returns>The updated instance; this may be different to the instance argument if
         /// either the original instance was null, or the stream defines a known sub-type of the
         /// original instance.</returns>
-        public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int fieldNumber)
-            => DeserializeWithLengthPrefix(source, value, type, style, fieldNumber, null, out long bytesRead);
+		public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int fieldNumber){
+			long bytesRead;
+			return DeserializeWithLengthPrefix(source, value, type, style, fieldNumber, null, out bytesRead);
+		}
 
 
         /// <summary>
@@ -277,8 +286,10 @@ namespace ProtoBuf.Meta
         /// <returns>The updated instance; this may be different to the instance argument if
         /// either the original instance was null, or the stream defines a known sub-type of the
         /// original instance.</returns>
-        public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int expectedField, Serializer.TypeResolver resolver)
-            => DeserializeWithLengthPrefix(source, value, type, style, expectedField, resolver, out long bytesRead);
+		public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int expectedField, Serializer.TypeResolver resolver){
+			long bytesRead;
+			return DeserializeWithLengthPrefix(source, value, type, style, expectedField, resolver, out bytesRead);
+		}
 
         /// <summary>
         /// Applies a protocol-buffer stream to an existing instance (or null), using length-prefixed
@@ -296,7 +307,9 @@ namespace ProtoBuf.Meta
         /// original instance.</returns>
         public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int expectedField, Serializer.TypeResolver resolver, out int bytesRead)
         {
-            object result = DeserializeWithLengthPrefix(source, value, type, style, expectedField, resolver, out long bytesRead64, out bool haveObject, null);
+			long bytesRead64;
+			bool haveObject;
+            object result = DeserializeWithLengthPrefix(source, value, type, style, expectedField, resolver, out bytesRead64, out haveObject, null);
             bytesRead = checked((int)bytesRead64);
             return result;
         }
@@ -314,7 +327,10 @@ namespace ProtoBuf.Meta
         /// <returns>The updated instance; this may be different to the instance argument if
         /// either the original instance was null, or the stream defines a known sub-type of the
         /// original instance.</returns>
-        public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int expectedField, Serializer.TypeResolver resolver, out long bytesRead) => DeserializeWithLengthPrefix(source, value, type, style, expectedField, resolver, out bytesRead, out bool haveObject, null);
+		public object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int expectedField, Serializer.TypeResolver resolver, out long bytesRead) {
+			bool haveObject;
+			return DeserializeWithLengthPrefix(source, value, type, style, expectedField, resolver, out bytesRead, out haveObject, null);
+		}
 
 
         private object DeserializeWithLengthPrefix(Stream source, object value, Type type, PrefixStyle style, int expectedField, Serializer.TypeResolver resolver, out long bytesRead, out bool haveObject, SerializationContext context)
@@ -334,7 +350,9 @@ namespace ProtoBuf.Meta
             {
 
                 bool expectPrefix = expectedField > 0 || resolver != null;
-                len = ProtoReader.ReadLongLengthPrefix(source, expectPrefix, style, out int actualField, out int tmpBytesRead);
+				int actualField;
+				int tmpBytesRead;
+                len = ProtoReader.ReadLongLengthPrefix(source, expectPrefix, style, out actualField, out tmpBytesRead);
                 if (tmpBytesRead == 0) return value;
                 bytesRead += tmpBytesRead;
                 if (len < 0) return value;
@@ -491,7 +509,8 @@ namespace ProtoBuf.Meta
             {
                 if (haveObject)
                 {
-                    current = model.DeserializeWithLengthPrefix(source, null, type, style, expectedField, resolver, out long bytesRead, out haveObject, context);
+					long bytesRead;
+                    current = model.DeserializeWithLengthPrefix(source, null, type, style, expectedField, resolver, out bytesRead, out haveObject, context);
                 }
                 return haveObject;
             }
@@ -830,6 +849,7 @@ namespace ProtoBuf.Meta
 #else
             if (listType == model.MapType(typeof(string)) || listType.IsArray
                 || !model.MapType(typeof(IEnumerable)).IsAssignableFrom(listType)) return null;
+			if (listType.FullName == "System.String") return null;
 #endif
             
             BasicList candidates = new BasicList();
@@ -963,7 +983,8 @@ namespace ProtoBuf.Meta
 #if !FEAT_IKVM
         private bool TryDeserializeList(TypeModel model, ProtoReader reader, DataFormat format, int tag, Type listType, Type itemType, ref object value)
         {
-            MethodInfo addMethod = TypeModel.ResolveListAdd(model, listType, itemType, out bool isList);
+			bool isList;
+            MethodInfo addMethod = TypeModel.ResolveListAdd(model, listType, itemType, out isList);
             if (addMethod == null) throw new NotSupportedException("Unknown list variant: " + listType.FullName);
             bool found = false;
             object nextItem = null;
@@ -1107,7 +1128,8 @@ namespace ProtoBuf.Meta
             if (type == null) throw new ArgumentNullException("type");
             Type itemType = null;
             ProtoTypeCode typecode = Helpers.GetTypeCode(type);
-            WireType wiretype = GetWireType(typecode, format, ref type, out int modelKey);
+			int modelKey;
+            WireType wiretype = GetWireType(typecode, format, ref type, out modelKey);
 
             bool found = false;
             if (wiretype == WireType.None)
@@ -1375,13 +1397,14 @@ namespace ProtoBuf.Meta
                     }
                 }
             }
+			int modelKey;
             if (type == typeof(byte[]))
             {
                 byte[] orig = (byte[])value, clone = new byte[orig.Length];
                 Helpers.BlockCopy(orig, 0, clone, 0, orig.Length);
                 return clone;
             }
-            else if (GetWireType(Helpers.GetTypeCode(type), DataFormat.Default, ref type, out int modelKey) != WireType.None && modelKey < 0)
+            else if (GetWireType(Helpers.GetTypeCode(type), DataFormat.Default, ref type, out modelKey) != WireType.None && modelKey < 0)
             {   // immutable; just return the original value
                 return value;
             }

@@ -209,7 +209,8 @@ namespace ProtoBuf
         /// </summary>
         public static void WriteDuration(TimeSpan value, ProtoWriter dest)
         {
-            var seconds = ToDurationSeconds(value, out int nanos);
+			int nanos;
+            var seconds = ToDurationSeconds(value, out nanos);
             WriteSecondsNanos(seconds, nanos, dest);
         }
         private static void WriteSecondsNanos(long seconds, int nanos, ProtoWriter dest)
@@ -244,7 +245,8 @@ namespace ProtoBuf
         /// </summary>
         public static void WriteTimestamp(DateTime value, ProtoWriter dest)
         {
-            var seconds = ToDurationSeconds(value - TimestampEpoch, out int nanos);
+			int nanos;
+            var seconds = ToDurationSeconds(value - TimestampEpoch, out nanos);
             
             if (nanos < 0)
             {   // from Timestamp.proto:

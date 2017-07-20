@@ -512,8 +512,9 @@ namespace ProtoBuf.Serializers
             }
         }
 
-        private bool CanUsePackedPrefix(object obj) =>
-            ArrayDecorator.CanUsePackedPrefix(packedWireType, Tail.ExpectedType);
+		private bool CanUsePackedPrefix(object obj) {
+			return ArrayDecorator.CanUsePackedPrefix (packedWireType, Tail.ExpectedType);
+		}
 
         public override object Read(object value, ProtoReader source)
         {
