@@ -1,35 +1,17 @@
 支持ILRuntime 的 protobuf-net
 把 src 里面的 protobuf-net 编译或直接放在 unity Assets 中 删掉.csproj
+
 Unity中使用 需要注册一下 
-		static bool InitedILRuntime = false;
+
+                static bool InitedILRuntime = false;
 		static IMethod s_HFInitialize;
 		static IMethod s_HFUpdate;
 		static ILRuntime.Runtime.Enviorment.AppDomain HFDomain;
-		static void InitializeILRuntime(){
-			BundleHelper.LoadAsset("assets.domain.hotfixed.bytes.ab",(wd) => {
-				BundleHelper.LoadAsset("assets.domain.hotfixep.bytes.ab",(wp)=>{
-					var bytesed = (wd.asset as TextAsset).bytes;
-					var bytesep = wp.asset == null ? null : (wp.asset as TextAsset).bytes;
-					var msb = new MemoryStream(bytesed);
-					var msp = new MemoryStream(bytesep);
-					HFDomain = new ILRuntime.Runtime.Enviorment.AppDomain ();
-					#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
-					msp = null;
-					#endif
-					HFDomain.LoadAssembly(msb, msp, new PdbReaderProvider());
-					InitializeILRuntimeCLR();
-					Initialize();
-					InitedILRuntime = true;
-				});
-			});
-		}
-	    static void InitializeILRuntimeCLR(){
 
-			//ILRuntime.Runtime.Generated.CLRBindings.Initialize(HFDomain);
+	        static void InitializeILRuntimeCLR(){
 			ProtoBuf.PType.RegisterFunctionCreateInstance(PType_CreateInstance);
 			ProtoBuf.PType.RegisterFunctionGetRealType(PType_GetRealType);
-
-	    }
+	        }
 		static void Initialize(){
 			var hfMain = HFDomain.GetType ("HotFix.Main");
 			s_HFInitialize = hfMain.GetMethod ("Initialize", 0);
@@ -53,6 +35,7 @@ Unity中使用 需要注册一下
 			}
 			return type;
 		}
+		    
 
 Dll 中使用 参考 hotfix目录下main.cs
 
