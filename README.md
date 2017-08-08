@@ -1,5 +1,7 @@
 支持ILRuntime 的 protobuf-net
 把 src 里面的 protobuf-net 编译或直接放在 unity Assets 中 删掉.csproj
+***已知问题 proto2 option和枚举 不能同时使用，由于ILRuntime不认为ILRT里面跑的数据类型是枚举，导致无法把默认值转换为枚举。
+
 
 Unity中使用 需要注册一下 
 
