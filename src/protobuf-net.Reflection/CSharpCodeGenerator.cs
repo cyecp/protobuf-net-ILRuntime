@@ -1,4 +1,4 @@
-﻿using Google.Protobuf.Reflection;
+using Google.Protobuf.Reflection;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -363,7 +363,8 @@ namespace ProtoBuf.Reflection
                         }
                         if (!string.IsNullOrWhiteSpace(defaultValue))
                         {
-                            defaultValue = ctx.NameNormalizer.GetName(enumType) + "." + defaultValue;
+                            //defaultValue = ctx.NameNormalizer.GetName(enumType) + "." + defaultValue;
+                            defaultValue = "global::"+enumType.FullyQualifiedName.Substring(1) + "." + defaultValue;
                         }
                     }
                 }
