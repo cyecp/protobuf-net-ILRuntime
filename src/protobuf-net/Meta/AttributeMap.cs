@@ -165,7 +165,8 @@ namespace ProtoBuf.Meta
                     {
                         PropertyInfo prop = member as PropertyInfo;
                         if (prop != null) {
-                            value = prop.GetValue(attribute, null);
+                            //value = prop.GetValue(attribute, null);
+                            value = prop.GetGetMethod(true).Invoke(attribute, null);
                             return true;
                         }
                         FieldInfo field = member as FieldInfo;

@@ -93,7 +93,8 @@ namespace ProtoBuf.Serializers
             {
                 if (obj == null)
                     return Helpers.IsValueType(prop.PropertyType) ? Activator.CreateInstance(prop.PropertyType) : null;
-                return prop.GetValue(obj, null);
+                //return prop.GetValue(obj, null);
+                return prop.GetGetMethod(true).Invoke(obj, null);
             }
             else if ((field = members[index] as FieldInfo) != null)
             {
