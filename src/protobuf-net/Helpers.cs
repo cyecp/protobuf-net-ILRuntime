@@ -358,15 +358,16 @@ namespace ProtoBuf
                 case TypeCode.String:
                     return (ProtoTypeCode)code;
             }
-            if (type == typeof(TimeSpan)) return ProtoTypeCode.TimeSpan;
-            if (type == typeof(Guid)) return ProtoTypeCode.Guid;
-            if (type == typeof(Uri)) return ProtoTypeCode.Uri;
+
+            if (type.FullName == typeof(TimeSpan).FullName) return ProtoTypeCode.TimeSpan;
+            if (type.FullName == typeof(Guid).FullName) return ProtoTypeCode.Guid;
+            if (type.FullName == typeof(Uri).FullName) return ProtoTypeCode.Uri;
 #if PORTABLE
             // In PCLs, the Uri type may not match (WinRT uses Internal/Uri, .Net uses System/Uri), so match on the full name instead
             if (type.FullName == typeof(Uri).FullName) return ProtoTypeCode.Uri;
 #endif
-            if (type == typeof(byte[])) return ProtoTypeCode.ByteArray;
-            if (type == typeof(System.Type)) return ProtoTypeCode.Type;
+            if (type.FullName == typeof(byte[]).FullName) return ProtoTypeCode.ByteArray;
+            if (type.FullName == typeof(System.Type).FullName) return ProtoTypeCode.Type;
 
             return ProtoTypeCode.Unknown;
 #endif

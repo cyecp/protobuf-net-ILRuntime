@@ -26,7 +26,7 @@ namespace ProtoBuf.Serializers
             : base(tail)
         {
             Helpers.DebugAssert(arrayType != null, "arrayType should be non-null");
-            Helpers.DebugAssert(arrayType.IsArray && arrayType.GetArrayRank() == 1, "should be single-dimension array; " + arrayType.FullName);
+            //Helpers.DebugAssert(arrayType.IsArray && arrayType.GetArrayRank() == 1, "should be single-dimension array; " + arrayType.FullName);
             this.itemType = arrayType.GetElementType();
 #if NO_GENERICS
             Type underlyingItemType = itemType;
